@@ -3,7 +3,7 @@
  * Copyright 2024 Bardia Moshiri
  * Copyright 2024 David Badiei
  *
- * This file is part of furios-recovery, hereafter referred to as the program.
+ * This file is part of furios-terminal, hereafter referred to as the program.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@
 #include "config.h"
 #include "indev.h"
 #include "log.h"
-#include "furios-recovery.h"
+#include "furios-terminal.h"
 #include "terminal.h"
 #include "theme.h"
 #include "themes.h"
@@ -604,7 +604,7 @@ int main(int argc, char *argv[]) {
     }
 
     /* Announce ourselves */
-    ul_log(UL_LOG_LEVEL_VERBOSE, "furios-recovery %s", UL_VERSION);
+    ul_log(UL_LOG_LEVEL_VERBOSE, "furios-terminal %s", UL_VERSION);
 
     /* Parse config files */
     ul_config_parse(cli_opts.config_files, cli_opts.num_config_files, &conf_opts);
@@ -721,7 +721,7 @@ int main(int argc, char *argv[]) {
 
     /* Top label text */
     lv_obj_t *furios_label = lv_label_create(top_label_container);
-    lv_label_set_text(furios_label, "FuriOS Recovery");
+    lv_label_set_text(furios_label, "FuriOS Terminal");
     lv_obj_align(furios_label, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* Initialize images */

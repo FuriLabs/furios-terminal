@@ -1,17 +1,17 @@
-FuriOS Recovery
+FuriOS Terminal
 ===============
 
-Recovery project for the initramfs based on [LVGL].
+Terminal project for the initramfs based on [LVGL].
 
 # Usage
 
 ```
-$ furios-recovery --help
-Usage: furios-recovery [OPTION]
+$ furios-terminal --help
+Usage: furios-terminal [OPTION]
 
 Mandatory arguments to long options are mandatory for short options too.
   -c, --config=PATH      Locaton of the main config file. Defaults to
-                         /etc/furios-recovery.conf.
+                         /etc/furios-terminal.conf.
   -C, --config-override  Location of the config override file. Values in
                          this file override values for the same keys in the
                          main config file. If specified multiple times, the
@@ -22,10 +22,10 @@ Mandatory arguments to long options are mandatory for short options too.
   -d  --dpi=N            Overrides the DPI
   -h, --help             Print this message and exit
   -v, --verbose          Enable more detailed logging output on STDERR
-  -V, --version          Print the furios-recovery version and exit
+  -V, --version          Print the furios-terminal version and exit
 ```
 
-For an example configuration file, see [furios-recovery].
+For an example configuration file, see [furios-terminal].
 
 # Development
 
@@ -42,11 +42,11 @@ For an example configuration file, see [furios-recovery].
 
 ## Building & running
 
-Some of FuriOS Recovery's dependencies are included as git submodules in this repository. You can clone the repository and initialise the submodules with
+Some of FuriOS Terminal's dependencies are included as git submodules in this repository. You can clone the repository and initialise the submodules with
 
 ```
-$ git clone https://github.com/furilabs/furios-recovery.git
-$ cd furios-recovery
+$ git clone https://github.com/furilabs/furios-terminal.git
+$ cd furios-terminal
 $ git submodule init
 $ git submodule update
 ```
@@ -59,7 +59,7 @@ Once you have the sources, you can build the app and run it in a VT. Unless your
 $ meson _build
 $ meson compile -C _build
 $ sudo chvt 2
-$ sudo ./_build/furios-recovery
+$ sudo ./_build/furios-terminal
 ```
 
 With meson <0\.55 use `ninja` instead of `meson compile`\.
@@ -77,7 +77,7 @@ will forcibly disable the DRM backend regardless if libdrm is installed or not.
 
 ## Backends
 
-FuriOS Recovery supports multiple lvgl display drivers, which are herein referred as "backends".
+FuriOS Terminal supports multiple lvgl display drivers, which are herein referred as "backends".
 
 Currently supported backends:
 
@@ -89,7 +89,7 @@ The backend can be switched at runtime by modifying the `general.backend` config
 
 ## Fonts
 
-In order to work with [LVGL], fonts need to be converted to bitmaps, stored as C arrays. FuriOS Recovery currently uses a combination of the [OpenSans] font for text and the [FontAwesome] font for pictograms. For both fonts only limited character ranges are included to reduce the binary size. To (re)generate the C file containing the combined font, run the following command
+In order to work with [LVGL], fonts need to be converted to bitmaps, stored as C arrays. FuriOS Terminal currently uses a combination of the [OpenSans] font for text and the [FontAwesome] font for pictograms. For both fonts only limited character ranges are included to reduce the binary size. To (re)generate the C file containing the combined font, run the following command
 
 ```
 $ ./regenerate-fonts.sh
@@ -113,7 +113,7 @@ Below is a short explanation of the different unicode ranges used above.
 
 ## Keyboard layouts
 
-FuriOS Recovery uses [squeekboard layouts] converted to C via [squeek2lvgl]. To regenerate the layouts, ensure that you have pipenv installed (e.g. via `pip install --user pipenv`) and then run
+FuriOS Terminal uses [squeekboard layouts] converted to C via [squeek2lvgl]. To regenerate the layouts, ensure that you have pipenv installed (e.g. via `pip install --user pipenv`) and then run
 
 ```
 $ ./regenerate-layouts.sh
@@ -123,7 +123,7 @@ from the root of the repository.
 
 # License
 
-FuriOS Recovery is licensed under the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+FuriOS Terminal is licensed under the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
 The [OpenSans] font is licensed under the Apache License 2.0.
 
@@ -154,9 +154,9 @@ The [FontAwesome] font is licensed under the Open Font License version 1.1.
 [lv_sim_emscripten]: https://github.com/lvgl/lv_sim_emscripten/blob/master/mouse_cursor_icon.c
 [lvgl]: https://github.com/lvgl/lvgl
 [online font converter]: https://lvgl.io/tools/fontconverter
-[open issues]: https://github.com/furilabs/furios-recovery/-/issues
+[open issues]: https://github.com/furilabs/furios-terminal/-/issues
 [osk-sdl]: https://gitlab.com/postmarketOS/osk-sdl
 [screenshots]: ./screenshots
 [squeek2lvgl]: https://gitlab.com/cherrypicker/squeek2lvgl
 [squeekboard layouts]: https://gitlab.gnome.org/World/Phosh/squeekboard/-/tree/master/data/keyboards
-[furios-recovery.conf]: ./furios-recovery.conf
+[furios-terminal.conf]: ./furios-terminal.conf

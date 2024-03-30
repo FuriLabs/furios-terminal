@@ -18,7 +18,7 @@ esac
 
 . /usr/share/initramfs-tools/hook-functions
 
-copy_exec /usr/bin/furios-recovery
+copy_exec /usr/bin/furios-terminal
 
 mkdir -p "${DESTDIR}/etc"
-cp /etc/furios-recovery.conf "${DESTDIR}/etc"
+cp /etc/furios-terminal.conf "${DESTDIR}/etc"
