@@ -42,8 +42,6 @@ furios_terminal_sources = [
   'theme.c',
   'themes.c',
   'lvm.c',
-  'images/furilabs_black.c',
-  'images/furilabs_white.c',
 ]
 
 squeek2lvgl_sources = [

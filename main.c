@@ -55,8 +55,6 @@
 #include <sys/reboot.h>
 #include <sys/time.h>
 
-#define NUM_IMAGES 1
-
 /**
  * Static variables
  */
@@ -70,46 +68,10 @@ bool is_keyboard_hidden = true;
 
 lv_obj_t *keyboard = NULL;
 
-LV_IMG_DECLARE(furilabs_white)
-LV_IMG_DECLARE(furilabs_black)
-
-const void *darkmode_imgs[] = {&furilabs_white};
-const void *lightmode_imgs[] = {&furilabs_black};
-
-/*
-   0: FuriLabs logo
-*/
-lv_obj_t* images[1];
-
 /**
  * Static prototypes
  */
 
-/**
- * Handle LV_EVENT_CLICKED events from the theme toggle button.
- *
- * @param event the event object
- */
-static void toggle_theme_btn_clicked_cb(lv_event_t *event);
-
-/**
- * Toggle between the light and dark theme.
- */
-static void toggle_theme(void);
-
-/**
- * Set the UI theme.
- *
- * @param is_dark true if the dark theme should be applied, false if the light theme should be applied
- */
-static void set_theme(bool is_dark);
-
-/**
- * Set the image mode
- *
- * @param is_dark true if the dark theme should be applied, false if the light theme should be applied
- */
-static void update_image_mode(bool is_dark);
 
 /**
  * Handle LV_EVENT_CLICKED events from the show/hide password toggle button.
@@ -155,47 +117,7 @@ static void set_keyboard_hidden(bool is_hidden);
  * @param obj keyboard widget
  * @param value y position
  */
-static void keyboard_anim_y_cb(void *obj, int32_t value);
-
-/**
- * Handle LV_EVENT_CLICKED events from the shutdown button.
- *
- * @param event the event object
- */
-static void shutdown_btn_clicked_cb(lv_event_t *event);
-
-/**
- * Handle LV_EVENT_VALUE_CHANGED events from the shutdown message box.
- *
- * @param event the event object
- */
-static void shutdown_mbox_value_changed_cb(lv_event_t *event);
-
-/**
- * Handle LV_EVENT_CLICKED events from the reboot button.
- *
- * @param event the event object
- */
-static void reboot_btn_clicked_cb(lv_event_t *event);
-
-/**
- * Handle LV_EVENT_VALUE_CHANGED events from the reboot message box.
- *
- * @param event the event object
- */
-static void reboot_mbox_value_changed_cb(lv_event_t *event);
-
-/**
- * Handle LV_EVENT_CLICKED events from the factory reset button.
- */
-static void factory_reset_btn_clicked_cb(lv_event_t *event);
-
-/**
- * Handle LV_EVENT_VALUE_CHANGED events from the factory reset message box.
- *
- * @param event the event object
- */
-static void factory_reset_mbox_value_changed_cb(lv_event_t *event);
+static void keyboard_anim_y_cb(void* obj, int32_t value);
 
 /**
  * Handle LV_EVENT_CLICKED events from the factory reset failed messsage box
@@ -241,11 +163,6 @@ static void factory_reset(void);
 static void decrypt(void);
 
 /**
- * Reboots the device.
- */
-static void reboot_device(void);
-
-/**
  * Shuts down the device.
  */
 static void shutdown(void);
@@ -261,28 +178,6 @@ static void sigaction_handler(int signum);
 /**
  * Static functions
  */
-
-static void toggle_theme_btn_clicked_cb(lv_event_t *event) {
-    LV_UNUSED(event);
-    toggle_theme();
-}
-
-static void toggle_theme(void) {
-    is_alternate_theme = !is_alternate_theme;
- 
-    update_image_mode(is_alternate_theme);
-    set_theme(is_alternate_theme);
-}
-
-static void update_image_mode(bool is_alternate) {
-    for (int i = 0; i < NUM_IMAGES; i++)
-        lv_img_set_src(images[i], is_alternate ? lightmode_imgs[i] : darkmode_imgs[i]);
-}
-
-static void set_theme(bool is_alternate) {
-    ul_theme_apply(&(ul_themes_themes[is_alternate ? conf_opts.theme.alternate_id : conf_opts.theme.default_id]));
-}
-
 static void toggle_pw_btn_clicked_cb(lv_event_t *event) {
     LV_UNUSED(event);
     toggle_password_obscured();
@@ -324,92 +219,8 @@ static void set_keyboard_hidden(bool is_hidden) {
     lv_anim_start(&keyboard_anim);
 }
 
-static void keyboard_anim_y_cb(void *obj, int32_t value) {
+static void keyboard_anim_y_cb(void* obj, int32_t value) {
     lv_obj_set_y(obj, value);
-}
-
-static void shutdown_btn_clicked_cb(lv_event_t *event) {
-    LV_UNUSED(event);
-    static const char *btns[] = { "Yes", "No", "" };
-    lv_obj_t *mbox = lv_msgbox_create(NULL, NULL, "Shutdown device?", btns, false);
-    lv_obj_set_size(mbox, 400, LV_SIZE_CONTENT);
-    lv_obj_add_event_cb(mbox, shutdown_mbox_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_center(mbox);
-}
-
-static void shutdown_mbox_value_changed_cb(lv_event_t *event) {
-    lv_obj_t *mbox = lv_event_get_current_target(event);
-    if (lv_msgbox_get_active_btn(mbox) == 0) {
-        shutdown();
-    }
-    lv_msgbox_close(mbox);
-}
-
-static void reboot_btn_clicked_cb(lv_event_t *event) {
-    LV_UNUSED(event);
-    static const char *btns[] = { "Yes", "No", "" };
-    lv_obj_t *mbox = lv_msgbox_create(NULL, NULL, "Reboot device?", btns, false);
-    lv_obj_set_size(mbox, 400, LV_SIZE_CONTENT);
-    lv_obj_add_event_cb(mbox, reboot_mbox_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_center(mbox);
-}
-
-static void reboot_mbox_value_changed_cb(lv_event_t *event) {
-    lv_obj_t *mbox = lv_event_get_current_target(event);
-    if (lv_msgbox_get_active_btn(mbox) == 0) {
-        reboot_device();
-    }
-    lv_msgbox_close(mbox);
-}
-
-static void factory_reset_btn_clicked_cb(lv_event_t *event) {
-    LV_UNUSED(event);
-    static const char *btns[] = { "Yes", "No", "" };
-    lv_obj_t *mbox = lv_msgbox_create(NULL, NULL, "Factory reset device?", btns, false);
-    lv_obj_set_size(mbox, 400, LV_SIZE_CONTENT);
-    lv_obj_add_event_cb(mbox, factory_reset_mbox_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_center(mbox);
-}
-
-static void factory_reset_mbox_value_changed_cb(lv_event_t *event) {
-    lv_obj_t *mbox = lv_event_get_current_target(event);
-    if (lv_msgbox_get_active_btn(mbox) == 0) {
-        const char *lvm_device_path = "/dev/droidian/droidian-persistent";
-        size_t print_bytes = 64;
-        int result = is_lv_encrypted_with_luks(lvm_device_path, print_bytes);
-
-        if (result == -1) {
-            // rootfs.img in data? well we can't reset that for now
-            static const char *btns[] = { "OK", ""};
-            lv_obj_t *fail_mbox = lv_msgbox_create(NULL, NULL, "Failed to factory reset", btns, false);
-            lv_obj_set_size(fail_mbox, 400, LV_SIZE_CONTENT);
-            lv_obj_add_event_cb(fail_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
-            lv_obj_center(fail_mbox);
-        } else if (result == 1) {
-            // LVM is encrypted, we have to decrypt first
-            static const char *btns[] = { "OK", ""};
-            lv_obj_t *success_mbox = lv_msgbox_create(NULL, NULL, "Successfully reset to factory settings", btns, false);
-            lv_obj_set_size(success_mbox, 400, LV_SIZE_CONTENT);
-            lv_obj_add_event_cb(success_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
-            lv_obj_center(success_mbox);
-            decrypt();
-            factory_reset();
-        } else {
-            // LVM is not encrypted, we can continue
-//            factory_reset();
-            decrypt();
-            factory_reset();
-
-            static const char *btns[] = { "OK", ""};
-            lv_obj_t *success_mbox = lv_msgbox_create(NULL, NULL, "Successfully reset to factory settings", btns, false);
-            lv_obj_set_size(success_mbox, 400, LV_SIZE_CONTENT);
-            lv_obj_add_event_cb(success_mbox, close_mbox_cb, LV_EVENT_VALUE_CHANGED, NULL);
-            lv_obj_center(success_mbox);
-            decrypt();
-            factory_reset();
-        }
-    }
-    lv_msgbox_close(mbox);
 }
 
 static void close_mbox_cb(lv_event_t *event) {
@@ -574,11 +385,6 @@ static void decrypt(void) {
     set_password_obscured(conf_opts.textarea.obscured);
 }
 
-static void reboot_device(void) {
-    sync();
-    reboot(RB_AUTOBOOT);
-}
-
 static void shutdown(void) {
     sync();
     reboot(RB_POWER_OFF);
@@ -688,9 +494,6 @@ int main(int argc, char *argv[]) {
     ul_indev_auto_connect(conf_opts.input.keyboard, conf_opts.input.pointer, conf_opts.input.touchscreen);
     ul_indev_set_up_mouse_cursor();
 
-    /* Initialise theme */
-    set_theme(is_alternate_theme);
-
     /* Prevent scrolling when keyboard is off-screen */
     lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
 
@@ -723,60 +526,6 @@ int main(int argc, char *argv[]) {
     lv_obj_t *furios_label = lv_label_create(top_label_container);
     lv_label_set_text(furios_label, "FuriOS Terminal");
     lv_obj_align(furios_label, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    /* Initialize images */
-    for (int i = 0; i < NUM_IMAGES; i++)
-        images[i] = lv_img_create(lv_scr_act());
-
-    /* Furilabs logo */
-    lv_obj_align(images[0], LV_ALIGN_TOP_MID, 0, 100);
-    
-    /* Set image mode */
-    update_image_mode(is_alternate_theme);
-
-    /* Reboot button */
-    lv_obj_t *reboot_btn = lv_btn_create(label_container);
-    lv_obj_set_width(reboot_btn, LV_PCT(100));
-    lv_obj_set_height(reboot_btn, 100);
-    lv_obj_t *reboot_btn_label = lv_label_create(reboot_btn);
-    lv_label_set_text(reboot_btn_label, "Reboot");
-    lv_obj_add_event_cb(reboot_btn, reboot_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(reboot_btn, LV_ALIGN_TOP_MID, 0, 500);
-    lv_obj_set_flex_flow(reboot_btn, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(reboot_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    /* Shutdown middle button */
-    lv_obj_t *shutdown_middle_btn = lv_btn_create(label_container);
-    lv_obj_set_width(shutdown_middle_btn, LV_PCT(100));
-    lv_obj_set_height(shutdown_middle_btn, 100);
-    lv_obj_t *shutdown_middle_btn_label = lv_label_create(shutdown_middle_btn);
-    lv_label_set_text(shutdown_middle_btn_label, "Shutdown");
-    lv_obj_add_event_cb(shutdown_middle_btn, shutdown_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(shutdown_middle_btn, LV_ALIGN_TOP_MID, 0, 600);
-    lv_obj_set_flex_flow(shutdown_middle_btn, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(shutdown_middle_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    /* Factory reset button */
-    lv_obj_t *factory_reset_btn = lv_btn_create(label_container);
-    lv_obj_set_width(factory_reset_btn, LV_PCT(100));
-    lv_obj_set_height(factory_reset_btn, 100);
-    lv_obj_t *factory_reset_btn_label = lv_label_create(factory_reset_btn);
-    lv_label_set_text(factory_reset_btn_label, "Factory Reset");
-    lv_obj_add_event_cb(factory_reset_btn, factory_reset_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(factory_reset_btn, LV_ALIGN_TOP_MID, 0, 700);
-    lv_obj_set_flex_flow(factory_reset_btn, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(factory_reset_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-
-    /* theme button */
-    lv_obj_t *theme_btn = lv_btn_create(label_container);
-    lv_obj_set_width(theme_btn, LV_PCT(100));
-    lv_obj_set_height(theme_btn, 100);
-    lv_obj_t *theme_btn_label = lv_label_create(theme_btn);
-    lv_label_set_text(theme_btn_label, "Toggle Theme");
-    lv_obj_add_event_cb(theme_btn, toggle_theme_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_align(theme_btn, LV_ALIGN_TOP_MID, 0, 800);
-    lv_obj_set_flex_flow(theme_btn, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(theme_btn, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
