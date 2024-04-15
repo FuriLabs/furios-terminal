@@ -520,12 +520,12 @@ int main(int argc, char *argv[]) {
     lv_obj_t *top_label_container = lv_obj_create(lv_scr_act());
     lv_obj_set_width(top_label_container, LV_PCT(100));
     lv_obj_set_height(top_label_container, LV_SIZE_CONTENT);
-    lv_obj_set_align(top_label_container, LV_ALIGN_BOTTOM_MID);
+    lv_obj_set_align(top_label_container, LV_ALIGN_TOP_MID);
 
     /* Top label text */
     lv_obj_t *furios_label = lv_label_create(top_label_container);
     lv_label_set_text(furios_label, "FuriOS Terminal");
-    lv_obj_align(furios_label, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(furios_label, LV_ALIGN_TOP_MID, 0, 50);
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
