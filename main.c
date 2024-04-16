@@ -527,6 +527,32 @@ int main(int argc, char *argv[]) {
     lv_label_set_text(furios_label, "FuriOS Terminal");
     lv_obj_align(furios_label, LV_ALIGN_TOP_MID, 0, 50);
 
+    /* Terminal box */
+    lv_obj_t* tBox = lv_textarea_create(lv_scr_act());
+    lv_textarea_add_text(tBox, "hehe");
+    static lv_style_t tBoxStyle;
+    lv_style_init(&tBoxStyle);
+    lv_style_set_bg_color(&tBoxStyle, lv_color_black()); //fix this later, go in and use theme func
+    lv_style_set_text_color(&tBoxStyle, lv_color_black());
+    lv_style_set_border_color(&tBoxStyle, lv_color_black());
+    lv_obj_add_style(tBox, &tBoxStyle, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_refresh_style(tBox, LV_PART_MAIN,LV_STYLE_PROP_ANY);
+    lv_obj_align(tBox, LV_ALIGN_TOP_MID, 0, 100);
+    lv_obj_set_size(tBox, hor_res, ver_res-100-keyboard_height);
+
+    keyboard = lv_keyboard_create(lv_scr_act());
+    lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
+    lv_keyboard_set_textarea(keyboard, tBox);
+    lv_obj_remove_event_cb(keyboard, lv_keyboard_def_event_cb);
+    lv_obj_add_event_cb(keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(keyboard, keyboard_ready_cb, LV_EVENT_READY, NULL);
+    lv_obj_set_pos(keyboard, 0, is_keyboard_hidden ? keyboard_height : 0);
+    lv_obj_set_size(keyboard, hor_res, keyboard_height);
+    ul_theme_prepare_keyboard(keyboard);
+
+    toggle_keyboard_hidden();
+
+
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
     while(1) {
