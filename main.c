@@ -502,6 +502,8 @@ int main(int argc, char *argv[]) {
     const int padding = keyboard_height / 8;
     const int label_width = hor_res - 2 * padding;
 
+    ul_theme_apply(&(ul_themes_themes[0]));
+
     /* Main flexbox */
     lv_obj_t *container = lv_obj_create(lv_scr_act());
     lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
@@ -532,14 +534,13 @@ int main(int argc, char *argv[]) {
     lv_textarea_add_text(tBox, "hehe");
     static lv_style_t tBoxStyle;
     lv_style_init(&tBoxStyle);
-    lv_style_set_bg_color(&tBoxStyle, lv_color_black()); //fix this later, go in and use theme func
-    lv_style_set_text_color(&tBoxStyle, lv_color_black());
+    lv_style_set_bg_color(&tBoxStyle, lv_color_black());
+    lv_style_set_text_color(&tBoxStyle, lv_color_white());
     lv_style_set_border_color(&tBoxStyle, lv_color_black());
     lv_obj_add_style(tBox, &tBoxStyle, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_refresh_style(tBox, LV_PART_MAIN,LV_STYLE_PROP_ANY);
     lv_obj_align(tBox, LV_ALIGN_TOP_MID, 0, 100);
     lv_obj_set_size(tBox, hor_res, ver_res-100-keyboard_height);
-
     keyboard = lv_keyboard_create(lv_scr_act());
     lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
     lv_keyboard_set_textarea(keyboard, tBox);
