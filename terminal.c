@@ -1,5 +1,6 @@
 /**
  * Copyright 2021 Johannes Marbach
+ * Copyright 2024 David Badiei
  *
  * This file is part of furios-terminal, hereafter referred to as the program.
  *
@@ -29,6 +30,7 @@
 #include <linux/kd.h>
 
 #include <sys/ioctl.h>
+#include <stdio.h>
 
 
 /**
@@ -39,6 +41,8 @@ static int current_fd = -1;
 
 static int original_mode = KD_TEXT;
 static int original_kb_mode = K_UNICODE;
+
+static char textBuffer[BUFFER_SIZE];
 
 
 /**
@@ -88,12 +92,12 @@ static void close_current_terminal(void) {
  * Public functions
  */
 
-void ul_terminal_prepare_current_terminal(void) {
+bool ul_terminal_prepare_current_terminal(void) {
     reopen_current_terminal();
 
     if (current_fd < 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not prepare current terminal");
-        return;
+        return false;
     }
 
     // NB: The order of calls appears to matter for some devices. See
@@ -101,19 +105,25 @@ void ul_terminal_prepare_current_terminal(void) {
 
     if (ioctl(current_fd, KDGKBMODE, &original_kb_mode) != 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not get terminal keyboard mode");
+        return false;
     }
 
     if (ioctl(current_fd, KDSKBMODE, K_OFF) != 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not set terminal keyboard mode to off");
+        return false;
     }
 
     if (ioctl(current_fd, KDGETMODE, &original_mode) != 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not get terminal mode");
+        return false;
     }
 
     if (ioctl(current_fd, KDSETMODE, KD_GRAPHICS) != 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not set terminal mode to graphics");
+        return false;
     }
+
+    return true;
 }
 
 void ul_terminal_reset_current_terminal(void) {
@@ -134,4 +144,17 @@ void ul_terminal_reset_current_terminal(void) {
     }
 
     close_current_terminal();
+}
+
+char * ul_terminal_update_terminal_text(void)
+{
+    /*if (== -1)
+        ul_log(UL_LOG_LEVEL_WARNING, "Could not update terminal text");*/
+
+    //read(current_fd, &textBuffer, BUFFER_SIZE);
+    
+    while (1)
+        printf(" %d ", read(current_fd, &textBuffer, (ssize_t)1));
+
+    return &textBuffer;
 }

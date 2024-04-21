@@ -1,5 +1,6 @@
 /**
  * Copyright 2021 Johannes Marbach
+ * Copyright 2024 David Badiei
  *
  * This file is part of furios-terminal, hereafter referred to as the program.
  *
@@ -21,14 +22,23 @@
 #ifndef UL_TERMINAL_H
 #define UL_TERMINAL_H
 
+#include <stdbool.h>
+
+#define BUFFER_SIZE 1024
+
 /**
  * Prepare the current TTY for graphics output.
  */
-void ul_terminal_prepare_current_terminal(void);
+bool ul_terminal_prepare_current_terminal(void);
 
 /**
  * Reset the current TTY to text output.
  */
 void ul_terminal_reset_current_terminal(void);
+
+/**
+* Update text from the TTY 
+*/
+char * ul_terminal_update_terminal_text(void);
 
 #endif /* UL_TERMINAL_H */

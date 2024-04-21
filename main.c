@@ -531,7 +531,6 @@ int main(int argc, char *argv[]) {
 
     /* Terminal box */
     lv_obj_t* tBox = lv_textarea_create(lv_scr_act());
-    lv_textarea_add_text(tBox, "hehe");
     static lv_style_t tBoxStyle;
     lv_style_init(&tBoxStyle);
     lv_style_set_bg_color(&tBoxStyle, lv_color_black());
@@ -553,6 +552,12 @@ int main(int argc, char *argv[]) {
 
     toggle_keyboard_hidden();
 
+
+    if(!ul_terminal_prepare_current_terminal())
+        lv_textarea_add_text(tBox, "Could not prepare the terminal!");
+
+    //broken rn
+    ul_terminal_update_terminal_text();
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
