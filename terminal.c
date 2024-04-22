@@ -31,7 +31,8 @@
 
 #include <sys/ioctl.h>
 #include <stdio.h>
-
+#include <stdlib.h>
+#include <poll.h>
 
 /**
  * Static variables
@@ -42,7 +43,8 @@ static int current_fd = -1;
 static int original_mode = KD_TEXT;
 static int original_kb_mode = K_UNICODE;
 
-static char textBuffer[BUFFER_SIZE];
+static char commandBuffer[BUFFER_SIZE];
+static int commandBufferPos = 0;
 
 
 /**
@@ -123,6 +125,16 @@ bool ul_terminal_prepare_current_terminal(void) {
         return false;
     }
 
+    int testFD = 0;
+    struct winsize ws = {};
+    ws.ws_col = 38;
+    ws.ws_row = 38;
+    int pid = forkpty(&testFD, NULL, NULL, &ws);
+    struct pollfd p[2] = { { testFD, POLLIN, 0 } };
+    if (poll(p, 2, 10) > 0)
+        read(testFD, &commandBuffer, 1);
+    
+
     return true;
 }
 
@@ -146,15 +158,19 @@ void ul_terminal_reset_current_terminal(void) {
     close_current_terminal();
 }
 
-char * ul_terminal_update_terminal_text(void)
+void ul_terminal_update_interpret_buffer(lv_keyboard_t* event,uint16_t key_id)
 {
-    /*if (== -1)
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not update terminal text");*/
-
-    //read(current_fd, &textBuffer, BUFFER_SIZE);
+    //
+    //lv_textarea_add_text(keyboard->ta, commandBuffer);
     
-    while (1)
-        printf(" %d ", read(current_fd, &textBuffer, (ssize_t)1));
+    //sprintf(commandBuffer, "%d ", );
+    read(current_fd, &commandBuffer, (ssize_t)BUFFER_SIZE);
+    lv_textarea_add_text(event->ta, commandBuffer);
 
-    return &textBuffer;
+
+    if (commandBufferPos >= 0 && commandBufferPos < 4096)
+    {
+        //lv_key
+        
+    }
 }

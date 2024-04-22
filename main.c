@@ -67,6 +67,7 @@ bool is_password_obscured = true;
 bool is_keyboard_hidden = true;
 
 lv_obj_t *keyboard = NULL;
+lv_obj_t* tBox = NULL;
 
 /**
  * Static prototypes
@@ -240,6 +241,10 @@ static void keyboard_value_changed_cb(lv_event_t *event) {
         sq2lv_switch_layer(kb, btn_id);
         return;
     }
+
+    //lv_keyboard_t* keyboard = (lv_keyboard_t*)kb;
+    
+    //ul_terminal_update_interpret_buffer(keyboard,btn_id);
 
     lv_keyboard_def_event_cb(event);
 }
@@ -415,18 +420,8 @@ int main(int argc, char *argv[]) {
     /* Parse config files */
     ul_config_parse(cli_opts.config_files, cli_opts.num_config_files, &conf_opts);
 
-    /* Prepare current TTY and clean up on termination */
-    ul_terminal_prepare_current_terminal();
-    struct sigaction action;
-    memset(&action, 0, sizeof(action));
-    action.sa_handler = sigaction_handler;
-    sigaction(SIGINT, &action, NULL);
-    sigaction(SIGTERM, &action, NULL);
-
     /* Initialise LVGL and set up logging callback */
     lv_init();
-
-    lv_log_register_print_cb(ul_log_print_cb);
 
     /* Initialise display driver */
     static lv_disp_drv_t disp_drv;
@@ -540,6 +535,8 @@ int main(int argc, char *argv[]) {
     lv_obj_refresh_style(tBox, LV_PART_MAIN,LV_STYLE_PROP_ANY);
     lv_obj_align(tBox, LV_ALIGN_TOP_MID, 0, 100);
     lv_obj_set_size(tBox, hor_res, ver_res-100-keyboard_height);
+
+    /* Keyboard */
     keyboard = lv_keyboard_create(lv_scr_act());
     lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
     lv_keyboard_set_textarea(keyboard, tBox);
@@ -553,11 +550,17 @@ int main(int argc, char *argv[]) {
     toggle_keyboard_hidden();
 
 
-    if(!ul_terminal_prepare_current_terminal())
+    if (!ul_terminal_prepare_current_terminal())
         lv_textarea_add_text(tBox, "Could not prepare the terminal!");
-
-    //broken rn
-    ul_terminal_update_terminal_text();
+    else
+    {
+        FILE* fp = popen("echo $PS1", "r");
+        char output[BUFFER_SIZE];
+        fgets(output, sizeof(output), fp);
+        output[strcspn(output, "\n")] = 0x20;
+        lv_textarea_add_text(tBox, output);
+    }
+       
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */

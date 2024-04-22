@@ -23,8 +23,13 @@
 #define UL_TERMINAL_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
-#define BUFFER_SIZE 1024
+#include "lvgl/lvgl.h"
+#include "lv_drv_conf.h"
+#include "squeek2lvgl/sq2lv.h"
+
+#define BUFFER_SIZE 4096
 
 /**
  * Prepare the current TTY for graphics output.
@@ -37,8 +42,8 @@ bool ul_terminal_prepare_current_terminal(void);
 void ul_terminal_reset_current_terminal(void);
 
 /**
-* Update text from the TTY 
+* Intepret keyboard input and add it to command buffer
 */
-char * ul_terminal_update_terminal_text(void);
+void ul_terminal_update_interpret_buffer(lv_keyboard_t* event, uint16_t key_id);
 
 #endif /* UL_TERMINAL_H */
