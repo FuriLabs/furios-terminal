@@ -45,8 +45,7 @@ static int current_fd = -1;
 static int original_mode = KD_TEXT;
 static int original_kb_mode = K_UNICODE;
 
-static char commandBuffer[BUFFER_SIZE];
-static int commandBufferPos = 0;
+static char terminalBuffer[BUFFER_SIZE];
 
 static int pid = 0;
 static int ttyFD = 0;
@@ -69,7 +68,7 @@ static bool reopen_current_terminal(void);
  */
 static void close_current_terminal(void);
 
-static void* startTTY(void* arg);
+static void* ttyThread(void* arg);
 
 
 /**
@@ -97,7 +96,7 @@ static void close_current_terminal(void) {
     current_fd = -1;
 }
 
-static void* startTTY(void* arg)
+static void* ttyThread(void* arg)
 {
     struct winsize ws = {};
     ws.ws_col = 38;
@@ -113,12 +112,14 @@ static void* startTTY(void* arg)
     while (1) {
         struct pollfd p[2] = { { ttyFD, POLLIN, 0 } };
         int pollResult = poll(p, 2, 10);
-        //printf(" %d ",pid);
+
         if (pollResult > 0) {
-            read(ttyFD, &commandBuffer, BUFFER_SIZE);
-            commandBuffer[BUFFER_SIZE] = '\0';
+            read(ttyFD, &terminalBuffer, BUFFER_SIZE);
+            terminalBuffer[BUFFER_SIZE] = '\0';
             termNeedsUpdate = true;
-            //printf("%s", commandBuffer);
+        }
+        else {
+
         }
     }
 }
@@ -161,7 +162,7 @@ bool ul_terminal_prepare_current_terminal(void) {
     
     pthread_t ttyID;
     
-    if (pthread_create(&ttyID, NULL, startTTY, NULL) != 0){
+    if (pthread_create(&ttyID, NULL, ttyThread, NULL) != 0){
         ul_log(UL_LOG_LEVEL_WARNING, "Could not start TTY thread");
         return false;
     }
@@ -196,5 +197,5 @@ void ul_terminal_reset_current_terminal(void) {
 
 char* ul_terminal_update_interpret_buffer()
 {
-    return &commandBuffer;
+    return &terminalBuffer;
 }

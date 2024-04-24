@@ -565,7 +565,7 @@ int main(int argc, char *argv[]) {
         lv_textarea_add_text(tBox, output);*/
     }
        
-    lv_timer_t* ttyUpdate = lv_timer_create(updateTTY, 1000, NULL);
+    lv_timer_t* ttyUpdate = lv_timer_create(updateTTY, 50, NULL);
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
