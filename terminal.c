@@ -33,6 +33,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <poll.h>
+#include <pthread.h>
+#include <pty.h>
 
 /**
  * Static variables
@@ -45,6 +47,9 @@ static int original_kb_mode = K_UNICODE;
 
 static char commandBuffer[BUFFER_SIZE];
 static int commandBufferPos = 0;
+
+static int pid = 0;
+static int ttyFD = 0;
 
 
 /**
@@ -62,6 +67,8 @@ static bool reopen_current_terminal(void);
  * Close the current file descriptor.
  */
 static void close_current_terminal(void);
+
+static void* startTTY(void* arg);
 
 
 /**
@@ -87,6 +94,38 @@ static void close_current_terminal(void) {
 
     close(current_fd);
     current_fd = -1;
+}
+
+static void* startTTY(void* arg)
+{
+    struct winsize ws = {};
+    ws.ws_col = 38;
+    ws.ws_row = 38;
+    pid = forkpty(&ttyFD, NULL, NULL, &ws);
+    
+    if (pid == 0) {
+        dup2(ttyFD, STDIN_FILENO);
+        //dup2(ttyFD, STDOUT_FILENO);
+        //dup2(ttyFD, STDERR_FILENO);
+        char* args[] = { "/bin/bash", "-i", NULL };
+        execve(args[0], args, NULL);
+    }
+    
+
+    while (1) {
+        struct pollfd p[2] = { { ttyFD, POLLIN, 0 } };
+        int pollResult = poll(p, 2, 10);
+        printf(" %d ",pid);
+        if (pollResult > 0) {
+            read(ttyFD, &commandBuffer, BUFFER_SIZE);
+            commandBuffer[BUFFER_SIZE] = '\0';
+
+            /*for (int* i = commandBuffer; *i != '\0'; ++i)
+            {
+                printf(" %02x ", *i);
+            }*/
+        }
+    }
 }
 
 
@@ -124,16 +163,18 @@ bool ul_terminal_prepare_current_terminal(void) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not set terminal mode to graphics");
         return false;
     }
-
-    int testFD = 0;
-    struct winsize ws = {};
-    ws.ws_col = 38;
-    ws.ws_row = 38;
-    int pid = forkpty(&testFD, NULL, NULL, &ws);
-    struct pollfd p[2] = { { testFD, POLLIN, 0 } };
-    if (poll(p, 2, 10) > 0)
-        read(testFD, &commandBuffer, 1);
     
+    pthread_t ttyID;
+    
+    if (pthread_create(&ttyID, NULL, startTTY, NULL) != 0){
+        ul_log(UL_LOG_LEVEL_WARNING, "Could not start TTY thread");
+        return false;
+    }
+
+    /*if (pthread_join(ttyID, NULL) != 0) {
+        ul_log(UL_LOG_LEVEL_WARNING, "TTY thrad did not finish");
+        return false;
+    }*/
 
     return true;
 }
@@ -158,19 +199,7 @@ void ul_terminal_reset_current_terminal(void) {
     close_current_terminal();
 }
 
-void ul_terminal_update_interpret_buffer(lv_keyboard_t* event,uint16_t key_id)
+char* ul_terminal_update_interpret_buffer()
 {
-    //
-    //lv_textarea_add_text(keyboard->ta, commandBuffer);
-    
-    //sprintf(commandBuffer, "%d ", );
-    read(current_fd, &commandBuffer, (ssize_t)BUFFER_SIZE);
-    lv_textarea_add_text(event->ta, commandBuffer);
-
-
-    if (commandBufferPos >= 0 && commandBufferPos < 4096)
-    {
-        //lv_key
-        
-    }
+    return &commandBuffer;
 }

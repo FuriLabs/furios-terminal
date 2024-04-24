@@ -242,10 +242,6 @@ static void keyboard_value_changed_cb(lv_event_t *event) {
         return;
     }
 
-    //lv_keyboard_t* keyboard = (lv_keyboard_t*)kb;
-    
-    //ul_terminal_update_interpret_buffer(keyboard,btn_id);
-
     lv_keyboard_def_event_cb(event);
 }
 
@@ -554,11 +550,12 @@ int main(int argc, char *argv[]) {
         lv_textarea_add_text(tBox, "Could not prepare the terminal!");
     else
     {
-        FILE* fp = popen("echo $PS1", "r");
+        /*FILE* fp = popen("echo $PS1", "r");
         char output[BUFFER_SIZE];
         fgets(output, sizeof(output), fp);
         output[strcspn(output, "\n")] = 0x20;
-        lv_textarea_add_text(tBox, output);
+        lv_textarea_add_text(tBox, output);*/
+        lv_textarea_add_text(tBox, ul_terminal_update_interpret_buffer());
     }
        
 

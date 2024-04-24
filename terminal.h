@@ -44,6 +44,6 @@ void ul_terminal_reset_current_terminal(void);
 /**
 * Intepret keyboard input and add it to command buffer
 */
-void ul_terminal_update_interpret_buffer(lv_keyboard_t* event, uint16_t key_id);
+char* ul_terminal_update_interpret_buffer();
 
 #endif /* UL_TERMINAL_H */
