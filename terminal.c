@@ -51,6 +51,7 @@ static int commandBufferPos = 0;
 static int pid = 0;
 static int ttyFD = 0;
 
+bool termNeedsUpdate = false;
 
 /**
  * Static prototypes
@@ -104,10 +105,7 @@ static void* startTTY(void* arg)
     pid = forkpty(&ttyFD, NULL, NULL, &ws);
     
     if (pid == 0) {
-        dup2(ttyFD, STDIN_FILENO);
-        //dup2(ttyFD, STDOUT_FILENO);
-        //dup2(ttyFD, STDERR_FILENO);
-        char* args[] = { "/bin/bash", "-i", NULL };
+        char* args[] = { "/bin/sh", NULL };
         execve(args[0], args, NULL);
     }
     
@@ -115,15 +113,12 @@ static void* startTTY(void* arg)
     while (1) {
         struct pollfd p[2] = { { ttyFD, POLLIN, 0 } };
         int pollResult = poll(p, 2, 10);
-        printf(" %d ",pid);
+        //printf(" %d ",pid);
         if (pollResult > 0) {
             read(ttyFD, &commandBuffer, BUFFER_SIZE);
             commandBuffer[BUFFER_SIZE] = '\0';
-
-            /*for (int* i = commandBuffer; *i != '\0'; ++i)
-            {
-                printf(" %02x ", *i);
-            }*/
+            termNeedsUpdate = true;
+            //printf("%s", commandBuffer);
         }
     }
 }

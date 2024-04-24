@@ -175,6 +175,7 @@ static void shutdown(void);
  */
 static void sigaction_handler(int signum);
 
+static void updateTTY(lv_timer_t* timer);
 
 /**
  * Static functions
@@ -397,6 +398,13 @@ static void sigaction_handler(int signum) {
     exit(0);
 }
 
+static void updateTTY(lv_timer_t* timer) {
+        if (termNeedsUpdate) {
+            lv_textarea_set_text(tBox, ul_terminal_update_interpret_buffer());
+            termNeedsUpdate = false;
+        }
+}
+
 /**
  * Main
  */
@@ -521,7 +529,7 @@ int main(int argc, char *argv[]) {
     lv_obj_align(furios_label, LV_ALIGN_TOP_MID, 0, 50);
 
     /* Terminal box */
-    lv_obj_t* tBox = lv_textarea_create(lv_scr_act());
+    tBox = lv_textarea_create(lv_scr_act());
     static lv_style_t tBoxStyle;
     lv_style_init(&tBoxStyle);
     lv_style_set_bg_color(&tBoxStyle, lv_color_black());
@@ -555,9 +563,9 @@ int main(int argc, char *argv[]) {
         fgets(output, sizeof(output), fp);
         output[strcspn(output, "\n")] = 0x20;
         lv_textarea_add_text(tBox, output);*/
-        lv_textarea_add_text(tBox, ul_terminal_update_interpret_buffer());
     }
        
+    lv_timer_t* ttyUpdate = lv_timer_create(updateTTY, 1000, NULL);
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */

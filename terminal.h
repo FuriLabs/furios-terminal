@@ -46,4 +46,6 @@ void ul_terminal_reset_current_terminal(void);
 */
 char* ul_terminal_update_interpret_buffer();
 
+extern bool termNeedsUpdate;
+
 #endif /* UL_TERMINAL_H */
