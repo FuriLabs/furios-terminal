@@ -539,6 +539,7 @@ int main(int argc, char *argv[]) {
     lv_obj_refresh_style(tBox, LV_PART_MAIN,LV_STYLE_PROP_ANY);
     lv_obj_align(tBox, LV_ALIGN_TOP_MID, 0, 100);
     lv_obj_set_size(tBox, hor_res, ver_res-100-keyboard_height);
+    lv_event_send(tBox, LV_EVENT_FOCUSED, NULL);
 
     /* Keyboard */
     keyboard = lv_keyboard_create(lv_scr_act());
