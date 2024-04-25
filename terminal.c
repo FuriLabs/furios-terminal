@@ -197,5 +197,5 @@ void ul_terminal_reset_current_terminal(void) {
 
 char* ul_terminal_update_interpret_buffer()
 {
-    return &terminalBuffer;
+    return (char*) &terminalBuffer;
 }
