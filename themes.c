@@ -122,7 +122,7 @@ static const ul_theme ul_themes_breezy_light = {
         .placeholder_color = 0x7f8c8d,
         .cursor = {
             .width = 1,
-            .color = 0x232629,
+            .color = 0xffffff,
             .period = 700
         }
     },
