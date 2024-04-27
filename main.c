@@ -400,7 +400,7 @@ static void sigaction_handler(int signum) {
 
 static void updateTTY(lv_timer_t* timer) {
         if (termNeedsUpdate) {
-            lv_textarea_set_text(tBox, ul_terminal_update_interpret_buffer());
+            lv_textarea_add_text(tBox, ul_terminal_update_interpret_buffer());
             termNeedsUpdate = false;
         }
 }

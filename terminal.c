@@ -23,6 +23,8 @@
 
 #include "log.h"
 
+#include "lvgl/src/widgets/keyboard/lv_keyboard_global.h"
+
 #include <fcntl.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -104,22 +106,31 @@ static void* ttyThread(void* arg)
     pid = forkpty(&ttyFD, NULL, NULL, &ws);
     
     if (pid == 0) {
-        char* args[] = { "/bin/sh", NULL };
+        char* args[] = { "/bin/bash","-l","-i", NULL};
         execve(args[0], args, NULL);
     }
-    
+    else {
+        struct pollfd p[2] = { { ttyFD, POLLIN | POLLOUT, 0 } };
+        while (1) {
 
-    while (1) {
-        struct pollfd p[2] = { { ttyFD, POLLIN, 0 } };
-        int pollResult = poll(p, 2, 10);
+            int pollResult = poll(p, 2, 10);
 
-        if (pollResult > 0) {
-            read(ttyFD, &terminalBuffer, BUFFER_SIZE);
-            terminalBuffer[BUFFER_SIZE] = '\0';
-            termNeedsUpdate = true;
-        }
-        else {
-
+            if (p[0].revents & POLLIN) {
+                read(ttyFD, &terminalBuffer, BUFFER_SIZE);
+                terminalBuffer[BUFFER_SIZE] = '\0';
+                termNeedsUpdate = true;
+            }
+            else if (p[0].revents & POLLOUT) {
+                if (commandReadyToSend) {
+                    //fgets(commandBuffer, sizeof(commandBuffer), stdin);
+                    write(ttyFD, &commandBuffer, sizeof(commandBuffer));
+                    commandReadyToSend = false;
+                    commandBufferPos = 0;
+                    for (int i = 0; i < commandBufferLength; i++)
+                        commandBuffer[i] = '\0';
+                    commandBufferLength = 0;
+                }
+            }
         }
     }
 }
