@@ -402,6 +402,8 @@ static void updateTTY(lv_timer_t* timer) {
         if (termNeedsUpdate) {
             lv_textarea_add_text(tBox, ul_terminal_update_interpret_buffer());
             termNeedsUpdate = false;
+            for (char* i = ul_terminal_update_interpret_buffer(); i < BUFFER_SIZE+ul_terminal_update_interpret_buffer(); i++)
+                *i = '\0';
         }
 }
 
@@ -555,7 +557,7 @@ int main(int argc, char *argv[]) {
     toggle_keyboard_hidden();
 
 
-    if (!ul_terminal_prepare_current_terminal())
+    if (!ul_terminal_prepare_current_terminal((int)lv_obj_get_width(tBox),(int)lv_obj_get_height(tBox)))
         lv_textarea_add_text(tBox, "Could not prepare the terminal!");
     else
     {

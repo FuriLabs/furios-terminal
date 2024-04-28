@@ -34,7 +34,7 @@
 /**
  * Prepare the current TTY for graphics output.
  */
-bool ul_terminal_prepare_current_terminal(void);
+bool ul_terminal_prepare_current_terminal(int termWidth, int termHeight);
 
 /**
  * Reset the current TTY to text output.
