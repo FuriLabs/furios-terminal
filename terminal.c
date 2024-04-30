@@ -112,6 +112,10 @@ static void* ttyThread(void* arg)
     ws.ws_col = ttyDimen->width / 42; //max width of font_32
     ws.ws_row = ttyDimen->height / 34; //max height of font_32
     pid = forkpty(&ttyFD, NULL, NULL, &ws);
+
+    char* enteredCommand = NULL;
+    char* cutTerminal = NULL;
+    int tmpLength = 0;
     
     if (pid == 0) {
         char* args[] = { "/bin/bash","-l","-i", NULL};
@@ -120,10 +124,6 @@ static void* ttyThread(void* arg)
     else {
         struct pollfd p[2] = { { ttyFD, POLLIN | POLLOUT, 0 } };
         while (1) {
-
-            char* enteredCommand = NULL;
-            int tmpLength = 0;
-
             poll(p, 2, 10);
 
             usleep(100);
@@ -131,8 +131,6 @@ static void* ttyThread(void* arg)
             if ((p[0].revents & POLLIN) && !termNeedsUpdate) {
                 int readValue = read(ttyFD, &terminalBuffer, BUFFER_SIZE);
                 terminalBuffer[readValue] = '\0';
-
-                char* cutTerminal = NULL;
                 
                 if (tmpLength != 0) {
                     cutTerminal = (char*)malloc(tmpLength);
@@ -140,10 +138,16 @@ static void* ttyThread(void* arg)
                     cutTerminal[tmpLength] = '\0';
                 }
 
-                if (enteredCommand == NULL || cutTerminal == NULL || (strcmp(enteredCommand, cutTerminal) != 0)) {
+                if (enteredCommand == NULL || cutTerminal == NULL || (strlen(enteredCommand) == 0) || (strcmp(enteredCommand, cutTerminal) != 0)) {
 
-                    free(enteredCommand);
-                    free(cutTerminal);
+                    if ((enteredCommand != NULL) && (strlen(enteredCommand) > 0)) {
+                        free(enteredCommand);
+                        enteredCommand = NULL;
+                    }
+                    if (cutTerminal != NULL) {
+                        free(cutTerminal);
+                        enteredCommand = NULL;
+                    }
 
                     termNeedsUpdate = true;
                 }
@@ -155,7 +159,7 @@ static void* ttyThread(void* arg)
                 enteredCommand = (char*)malloc(commandBufferLength);
                 memcpy(enteredCommand, commandBuffer, commandBufferLength);
                 enteredCommand[commandBufferLength] = '\0';
-                for (int i = 0; i < commandBufferLength; i++)
+                for (long unsigned int i = 0; i < sizeof(commandBuffer); i++)
                     commandBuffer[i] = '\0';
                 tmpLength = commandBufferLength;
                 commandBufferLength = 0;

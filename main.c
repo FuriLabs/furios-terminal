@@ -559,14 +559,6 @@ int main(int argc, char *argv[]) {
 
     if (!ul_terminal_prepare_current_terminal((int)lv_obj_get_width(tBox),(int)lv_obj_get_height(tBox)))
         lv_textarea_add_text(tBox, "Could not prepare the terminal!");
-    else
-    {
-        /*FILE* fp = popen("echo $PS1", "r");
-        char output[BUFFER_SIZE];
-        fgets(output, sizeof(output), fp);
-        output[strcspn(output, "\n")] = 0x20;
-        lv_textarea_add_text(tBox, output);*/
-    }
        
     lv_timer_t* ttyUpdate = lv_timer_create(updateTTY, 50, NULL);
 
