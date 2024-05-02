@@ -101,7 +101,6 @@ static void keyboard_draw_part_begin_cb(lv_event_t *event);
 
 static void init_styles(const ul_theme *theme) {
     reset_style(&(styles.widget));
-    lv_style_set_text_font(&(styles.widget), &font_32);
 
     reset_style(&(styles.window));
     lv_style_set_bg_opa(&(styles.window), LV_OPA_COVER);
@@ -155,6 +154,7 @@ static void init_styles(const ul_theme *theme) {
     lv_style_set_border_color(&(styles.textarea), lv_color_hex(theme->textarea.border_color));
     lv_style_set_radius(&(styles.textarea), lv_dpx(theme->textarea.corner_radius));
     lv_style_set_pad_all(&(styles.textarea), lv_dpx(theme->textarea.pad));
+    lv_style_set_text_font(&(styles.textarea), &lv_font_unscii_16);
 
     reset_style(&(styles.textarea_placeholder));
     lv_style_set_text_color(&(styles.textarea_placeholder), lv_color_hex(theme->textarea.placeholder_color));

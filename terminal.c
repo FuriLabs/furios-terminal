@@ -54,6 +54,8 @@ static int ttyFD = 0;
 
 bool termNeedsUpdate = false;
 
+pthread_mutex_t ttyMutex;
+
 /**
  * Static prototypes
  */
@@ -109,8 +111,10 @@ static void* ttyThread(void* arg)
     struct winsize ws = {};
     struct termDimen *ttyDimen = (struct termDimen*)arg;
 
-    ws.ws_col = ttyDimen->width / 42; //max width of font_32
-    ws.ws_row = ttyDimen->height / 34; //max height of font_32
+    setenv("TERM","xterm",1);
+
+    ws.ws_col = ttyDimen->width / 8; //max width of font_32
+    ws.ws_row = ttyDimen->height / 16; //max height of font_32
     pid = forkpty(&ttyFD, NULL, NULL, &ws);
 
     char* enteredCommand = NULL;
@@ -124,6 +128,7 @@ static void* ttyThread(void* arg)
     else {
         struct pollfd p[2] = { { ttyFD, POLLIN | POLLOUT, 0 } };
         while (1) {
+            pthread_mutex_lock(&ttyMutex);
             poll(p, 2, 10);
 
             usleep(100);
@@ -150,7 +155,7 @@ static void* ttyThread(void* arg)
                     }
 
                     termNeedsUpdate = true;
-                }
+                }   
             }
             else if ((p[0].revents & POLLOUT) && commandReadyToSend) {
                 write(ttyFD, &commandBuffer, sizeof(commandBuffer));
@@ -164,6 +169,7 @@ static void* ttyThread(void* arg)
                 tmpLength = commandBufferLength;
                 commandBufferLength = 0;
             }
+            pthread_mutex_unlock(&ttyMutex);
         }
     }
 }

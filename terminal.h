@@ -24,6 +24,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <pthread.h>
 
 #include "lvgl/lvgl.h"
 #include "lv_drv_conf.h"
@@ -47,5 +48,7 @@ void ul_terminal_reset_current_terminal(void);
 char* ul_terminal_update_interpret_buffer();
 
 extern bool termNeedsUpdate;
+
+extern pthread_mutex_t ttyMutex;
 
 #endif /* UL_TERMINAL_H */
