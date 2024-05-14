@@ -177,6 +177,8 @@ static void sigaction_handler(int signum);
 
 static void updateTTY(lv_timer_t* timer);
 
+static void clearTopTTY();
+
 /**
  * Static functions
  */
@@ -400,11 +402,26 @@ static void sigaction_handler(int signum) {
 
 static void updateTTY(lv_timer_t* timer) {
         if (termNeedsUpdate) {
+            if (strlen(lv_textarea_get_text(tBox)) >= 9314)
+                clearTopTTY();
             lv_textarea_add_text(tBox, ul_terminal_update_interpret_buffer());
             termNeedsUpdate = false;
             for (char* i = ul_terminal_update_interpret_buffer(); i < BUFFER_SIZE+ul_terminal_update_interpret_buffer(); i++)
                 *i = '\0';
         }
+}
+
+static void clearTopTTY()
+{
+    char* textBuffer = (char*)malloc(strlen(lv_textarea_get_text(tBox)));
+
+    strcpy(textBuffer,lv_textarea_get_text(tBox));
+
+    char *newText = textBuffer+strlen(ul_terminal_update_interpret_buffer());
+
+    lv_textarea_set_text(tBox,newText);
+
+    free(textBuffer);
 }
 
 /**
