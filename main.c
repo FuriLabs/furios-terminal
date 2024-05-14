@@ -179,6 +179,8 @@ static void updateTTY(lv_timer_t* timer);
 
 static void clearTopTTY();
 
+static void removeEscapeCodes(char *buffer);
+
 /**
  * Static functions
  */
@@ -404,6 +406,9 @@ static void updateTTY(lv_timer_t* timer) {
         if (termNeedsUpdate) {
             if (strlen(lv_textarea_get_text(tBox)) >= 9314)
                 clearTopTTY();
+            if (strstr(ul_terminal_update_interpret_buffer(),"\033[2J") != NULL)
+                lv_textarea_set_text(tBox,"");
+            removeEscapeCodes(ul_terminal_update_interpret_buffer());
             lv_textarea_add_text(tBox, ul_terminal_update_interpret_buffer());
             termNeedsUpdate = false;
             for (char* i = ul_terminal_update_interpret_buffer(); i < BUFFER_SIZE+ul_terminal_update_interpret_buffer(); i++)
@@ -422,6 +427,36 @@ static void clearTopTTY()
     lv_textarea_set_text(tBox,newText);
 
     free(textBuffer);
+}
+
+static void removeEscapeCodes(char *buffer)
+{
+    char *src = buffer;
+    char *dst = buffer;
+    int inside_escape = 0;
+
+    // Iterate through the string character by character
+    while (*src != '\0') {
+        if (*src == '\x1B') {  // Found ESC character, indicating start of escape sequence
+            inside_escape = 1;
+        }
+
+        if (!inside_escape) {
+            // Copy characters to destination if not inside an escape sequence
+            *dst = *src;
+            dst++;
+        }
+
+        if (inside_escape && (*src == 'h' || *src == 'm')) {  // Found end of escape sequence
+            inside_escape = 0;
+        }
+
+        src++;  // Move to the next character
+    }
+
+    // Null-terminate the destination string
+    *dst = '\0';
+    
 }
 
 /**

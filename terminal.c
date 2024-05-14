@@ -111,8 +111,6 @@ static void* ttyThread(void* arg)
     struct winsize ws = {};
     struct termDimen *ttyDimen = (struct termDimen*)arg;
 
-    setenv("TERM","xterm",1);
-
     ws.ws_col = ttyDimen->width / 8; //max width of font_32
     ws.ws_row = ttyDimen->height / 16; //max height of font_32
     pid = forkpty(&ttyFD, NULL, NULL, &ws);
@@ -122,8 +120,9 @@ static void* ttyThread(void* arg)
     int tmpLength = 0;
     
     if (pid == 0) {
-        char* args[] = { "/bin/bash","-l","-i", NULL};
-        execve(args[0], args, NULL);
+        putenv("TERM=xterm");
+        char* args[] = { getenv("SHELL"),"-l","-i", NULL};
+        execl(args[0], args, NULL);
     }
     else {
         struct pollfd p[2] = { { ttyFD, POLLIN | POLLOUT, 0 } };
