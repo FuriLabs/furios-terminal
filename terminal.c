@@ -37,6 +37,7 @@
 #include <poll.h>
 #include <pthread.h>
 #include <pty.h>
+#include <signal.h>
 
 /**
  * Static variables
@@ -74,6 +75,7 @@ static void close_current_terminal(void);
 
 static void* ttyThread(void* arg);
 
+static void runAndKillChildPids();
 
 typedef struct termDimen
 {
@@ -106,6 +108,26 @@ static void close_current_terminal(void) {
     current_fd = -1;
 }
 
+
+static void runKillChildPids()
+{
+    char numberBuffer[20];
+    sprintf(numberBuffer,"%d",pid);
+    
+    char *commandToSend = (char*)malloc(strlen("pgrep -p ") + strlen(numberBuffer));
+    strcpy(commandToSend,"pgrep -P ");
+    strcpy(commandToSend+strlen("pgrep -p "),numberBuffer);
+    FILE *fp = popen(commandToSend,"r");
+    free(commandToSend);
+    if (fp == NULL)
+        return;
+    
+    while (fgets(numberBuffer,20,fp) != NULL)
+        kill(atoi(numberBuffer),SIGINT);
+
+    pclose(fp);
+}
+
 static void* ttyThread(void* arg)
 {
     struct winsize ws = {};
@@ -131,6 +153,13 @@ static void* ttyThread(void* arg)
             poll(p, 2, 10);
 
             usleep(100);
+
+            if (sigINTSent)
+            {
+                runKillChildPids();
+                kill(pid,SIGINT);
+                sigINTSent = false;
+            }
 
             if ((p[0].revents & POLLIN) && !termNeedsUpdate) {
                 int readValue = read(ttyFD, &terminalBuffer, BUFFER_SIZE);
