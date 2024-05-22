@@ -42,6 +42,7 @@ furios_terminal_sources = [
   'theme.c',
   'themes.c',
   'lvm.c',
+  'termstr.c',
 ]
 
 squeek2lvgl_sources = [

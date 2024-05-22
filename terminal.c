@@ -25,6 +25,8 @@
 
 #include "lvgl/src/widgets/keyboard/lv_keyboard_global.h"
 
+#include "termstr.h"
+
 #include <fcntl.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -170,20 +172,26 @@ static void* ttyThread(void* arg)
                     memcpy(cutTerminal, terminalBuffer, tmpLength);
                     cutTerminal[tmpLength] = '\0';
                 }
-
-                if (enteredCommand == NULL || cutTerminal == NULL || (strlen(enteredCommand) == 0) || (strcmp(enteredCommand, cutTerminal) != 0)) {
-
-                    if ((enteredCommand != NULL) && (strlen(enteredCommand) > 0)) {
-                        free(enteredCommand);
-                        enteredCommand = NULL;
-                    }
-                    if (cutTerminal != NULL) {
-                        free(cutTerminal);
-                        enteredCommand = NULL;
-                    }
-
+    
+                if (enteredCommand == NULL || cutTerminal == NULL || strlen(enteredCommand) == 0 || strcmp(enteredCommand,cutTerminal) != 0)
                     termNeedsUpdate = true;
-                }   
+                else if (strcmp(enteredCommand,cutTerminal) == 0){
+                    removeEscapeCodes(terminalBuffer);
+                    int copySize = strlen(terminalBuffer)-strlen(enteredCommand);
+                    if (copySize-2 > 0){
+                        memcpy(terminalBuffer,terminalBuffer+strlen(enteredCommand),copySize);
+                        terminalBuffer[copySize] = 0;
+                        termNeedsUpdate = true;
+                    }
+                }
+                if ((enteredCommand != NULL) && (strlen(enteredCommand) > 0)) {
+                    free(enteredCommand);
+                    enteredCommand = NULL;
+                }
+                if (cutTerminal != NULL) {
+                    free(cutTerminal);
+                    cutTerminal = NULL;
+                }
             }
             else if ((p[0].revents & POLLOUT) && commandReadyToSend) {
                 write(ttyFD, &commandBuffer, sizeof(commandBuffer));
