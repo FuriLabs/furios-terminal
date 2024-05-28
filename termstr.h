@@ -17,4 +17,4 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
-void removeEscapeCodes(char *buffer);
+void remove_escape_codes(char *buffer);

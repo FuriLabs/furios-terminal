@@ -68,7 +68,7 @@ bool is_password_obscured = true;
 bool is_keyboard_hidden = true;
 
 lv_obj_t *keyboard = NULL;
-lv_obj_t* tBox = NULL;
+lv_obj_t* t_box = NULL;
 
 /**
  * Static prototypes
@@ -176,13 +176,13 @@ static void shutdown(void);
  */
 static void sigaction_handler(int signum);
 
-static void updateTTYLoop(lv_timer_t* timer);
+static void update_tty_loop(lv_timer_t* timer);
 
-static void updateTTY(char * loc, int length);
+static void update_tty(char * loc, int length);
 
-static void clearTopTTY(char* loc);
+static void clear_top_tty(char* loc);
 
-static void splitAndAddTTY();
+static void split_and_add_tty();
 
 /**
  * Static functions
@@ -405,60 +405,60 @@ static void sigaction_handler(int signum) {
     exit(0);
 }
 
-static void updateTTYLoop(lv_timer_t* timer) {
-    updateTTY(ul_terminal_update_interpret_buffer(),BUFFER_SIZE);
+static void update_tty_loop(lv_timer_t* timer) {
+    update_tty(ul_terminal_update_interpret_buffer(),BUFFER_SIZE);
 }
 
-static void updateTTY(char *loc,int length)
+static void update_tty(char *loc,int length)
 {
-    if (termNeedsUpdate) {
+    if (term_needs_update && length > 0) {
         int maxlen = length == BUFFER_SIZE ? 9314 : 4096;
         if (strstr(loc, "\033[2J") != NULL)
-            lv_textarea_set_text(tBox, "");
-        if (strlen(lv_textarea_get_text(tBox)) >= maxlen)
-            clearTopTTY(loc);
-        if ((strlen(lv_textarea_get_text(tBox)) + strlen(loc) >= 4096) && loc == ul_terminal_update_interpret_buffer()) {
-            splitAndAddTTY();
+            lv_textarea_set_text(t_box, "");
+        if (strlen(lv_textarea_get_text(t_box)) >= maxlen)
+            clear_top_tty(loc);
+        if ((strlen(lv_textarea_get_text(t_box)) + strlen(loc) >= 4096) && loc == ul_terminal_update_interpret_buffer()) {
+            split_and_add_tty();
             return;
         }
-        removeEscapeCodes(loc);
-        lv_textarea_add_text(tBox, loc);
-        termNeedsUpdate = false;
+        remove_escape_codes(loc);
+        lv_textarea_add_text(t_box, loc);
+        term_needs_update = false;
         for (char* i = loc; i < length + loc; i++)
             *i = '\0';
     }
 }
 
-static void splitAndAddTTY()
+static void split_and_add_tty()
 {
-    int i = ((strlen(lv_textarea_get_text(tBox)) + strlen(ul_terminal_update_interpret_buffer())) / 4096) + 1;
+    int i = ((strlen(lv_textarea_get_text(t_box)) + strlen(ul_terminal_update_interpret_buffer())) / 4096) + 1;
     int j = i;
-    int sectionSize = strlen(ul_terminal_update_interpret_buffer()) / j;
+    int section_size = strlen(ul_terminal_update_interpret_buffer()) / j;
 
     while (i >= 0) {
-        char* textSection = (char*)malloc(sectionSize+1);
-        memcpy(textSection, ul_terminal_update_interpret_buffer() + ((j - i) * sectionSize), sectionSize);
-        textSection[sectionSize] = '\0';
-        updateTTY(textSection,sectionSize);
-        termNeedsUpdate = true;
-        free(textSection);
+        char* text_section = (char*)malloc(section_size+1);
+        memcpy(text_section, ul_terminal_update_interpret_buffer() + ((j - i) * section_size), section_size);
+        text_section[section_size] = '\0';
+        update_tty(text_section,section_size);
+        term_needs_update = true;
+        free(text_section);
         i--;
     }
 
-    termNeedsUpdate = false;
+    term_needs_update = false;
 }
 
-static void clearTopTTY(char* loc)
+static void clear_top_tty(char* loc)
 {
-    char* textBuffer = (char*)malloc(strlen(lv_textarea_get_text(tBox)));
+    char* text_buffer = (char*)malloc(strlen(lv_textarea_get_text(t_box)));
 
-    strcpy(textBuffer,lv_textarea_get_text(tBox));
+    strcpy(text_buffer,lv_textarea_get_text(t_box));
 
-    char *newText = textBuffer+strlen(loc);
+    char *newText = text_buffer+strlen(loc);
 
-    lv_textarea_set_text(tBox,newText);
+    lv_textarea_set_text(t_box,newText);
 
-    free(textBuffer);
+    free(text_buffer);
 }
 
 /**
@@ -585,22 +585,22 @@ int main(int argc, char *argv[]) {
     lv_obj_align(furios_label, LV_ALIGN_TOP_MID, 0, 50);
 
     /* Terminal box */
-    tBox = lv_textarea_create(lv_scr_act());
-    static lv_style_t tBoxStyle;
-    lv_style_init(&tBoxStyle);
-    lv_style_set_bg_color(&tBoxStyle, lv_color_black());
-    lv_style_set_text_color(&tBoxStyle, lv_color_white());
-    lv_style_set_border_color(&tBoxStyle, lv_color_black());
-    lv_obj_add_style(tBox, &tBoxStyle, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_refresh_style(tBox, LV_PART_MAIN,LV_STYLE_PROP_ANY);
-    lv_obj_align(tBox, LV_ALIGN_TOP_MID, 0, 100);
-    lv_obj_set_size(tBox, hor_res, ver_res-100-keyboard_height);
-    lv_event_send(tBox, LV_EVENT_FOCUSED, NULL);
+    t_box = lv_textarea_create(lv_scr_act());
+    static lv_style_t t_box_style;
+    lv_style_init(&t_box_style);
+    lv_style_set_bg_color(&t_box_style, lv_color_black());
+    lv_style_set_text_color(&t_box_style, lv_color_white());
+    lv_style_set_border_color(&t_box_style, lv_color_black());
+    lv_obj_add_style(t_box, &t_box_style, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_refresh_style(t_box, LV_PART_MAIN,LV_STYLE_PROP_ANY);
+    lv_obj_align(t_box, LV_ALIGN_TOP_MID, 0, 100);
+    lv_obj_set_size(t_box, hor_res, ver_res-100-keyboard_height);
+    lv_event_send(t_box, LV_EVENT_FOCUSED, NULL);
 
     /* Keyboard */
     keyboard = lv_keyboard_create(lv_scr_act());
     lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
-    lv_keyboard_set_textarea(keyboard, tBox);
+    lv_keyboard_set_textarea(keyboard, t_box);
     lv_obj_remove_event_cb(keyboard, lv_keyboard_def_event_cb);
     lv_obj_add_event_cb(keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(keyboard, keyboard_ready_cb, LV_EVENT_READY, NULL);
@@ -611,10 +611,10 @@ int main(int argc, char *argv[]) {
     toggle_keyboard_hidden();
 
 
-    if (!ul_terminal_prepare_current_terminal((int)lv_obj_get_width(tBox),(int)lv_obj_get_height(tBox)))
-        lv_textarea_add_text(tBox, "Could not prepare the terminal!");
+    if (!ul_terminal_prepare_current_terminal((int)lv_obj_get_width(t_box),(int)lv_obj_get_height(t_box)))
+        lv_textarea_add_text(t_box, "Could not prepare the terminal!");
        
-    lv_timer_t* ttyUpdate = lv_timer_create(updateTTYLoop, 50, NULL);
+    lv_timer_t* tty_update = lv_timer_create(update_tty_loop, 50, NULL);
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */

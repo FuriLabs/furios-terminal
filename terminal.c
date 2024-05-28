@@ -50,14 +50,14 @@ static int current_fd = -1;
 static int original_mode = KD_TEXT;
 static int original_kb_mode = K_UNICODE;
 
-static char terminalBuffer[BUFFER_SIZE];
+static char terminal_buffer[BUFFER_SIZE];
 
 static int pid = 0;
-static int ttyFD = 0;
+static int tty_fd = 0;
 
-bool termNeedsUpdate = false;
+bool term_needs_update = false;
 
-pthread_mutex_t ttyMutex;
+pthread_mutex_t tty_mutex;
 
 /**
  * Static prototypes
@@ -75,11 +75,11 @@ static bool reopen_current_terminal(void);
  */
 static void close_current_terminal(void);
 
-static void* ttyThread(void* arg);
+static void* tty_thread(void* arg);
 
-static void runKillChildPids();
+static void run_kill_child_pids();
 
-typedef struct termDimen
+typedef struct term_dimen
 {
     int width;
     int height;
@@ -111,36 +111,36 @@ static void close_current_terminal(void) {
 }
 
 
-static void runKillChildPids()
+static void run_kill_child_pids()
 {
-    char numberBuffer[20];
-    sprintf(numberBuffer,"%d",pid);
-    char *commandToSend = (char*)malloc(strlen("pgrep -P ") + strlen(numberBuffer));
-    strcpy(commandToSend,"pgrep -P ");
-    strcpy(commandToSend+strlen("pgrep -P "),numberBuffer);
-    FILE *fp = popen(commandToSend,"r");
-    free(commandToSend);
+    char number_buffer[20];
+    sprintf(number_buffer,"%d",pid);
+    char *command_to_send = (char*)malloc(strlen("pgrep -P ") + strlen(number_buffer));
+    strcpy(command_to_send,"pgrep -P ");
+    strcpy(command_to_send+strlen("pgrep -P "),number_buffer);
+    FILE *fp = popen(command_to_send,"r");
+    free(command_to_send);
     if (fp == NULL)
         return;
     
-    while (fgets(numberBuffer,20,fp) != NULL)
-        kill(atoi(numberBuffer),SIGINT);
+    while (fgets(number_buffer,20,fp) != NULL)
+        kill(atoi(number_buffer),SIGINT);
 
     pclose(fp);
 }
 
-static void* ttyThread(void* arg)
+static void* tty_thread(void* arg)
 {
     struct winsize ws = {};
-    struct termDimen *ttyDimen = (struct termDimen*)arg;
+    struct term_dimen *tty_dimen = (struct term_dimen*)arg;
 
-    ws.ws_col = ttyDimen->width / 8; //max width of font_32
-    ws.ws_row = ttyDimen->height / 16; //max height of font_32
-    pid = forkpty(&ttyFD, NULL, NULL, &ws);
+    ws.ws_col = tty_dimen->width / 8; //max width of font_32
+    ws.ws_row = tty_dimen->height / 16; //max height of font_32
+    pid = forkpty(&tty_fd, NULL, NULL, &ws);
 
-    char* enteredCommand = NULL;
-    char* cutTerminal = NULL;
-    int tmpLength = 0;
+    char* entered_command = NULL;
+    char* cut_terminal = NULL;
+    int tmp_length = 0;
     
     if (pid == 0) {
         putenv("TERM=xterm");
@@ -148,63 +148,63 @@ static void* ttyThread(void* arg)
         execl(args[0], args, NULL);
     }
     else {
-        struct pollfd p[2] = { { ttyFD, POLLIN | POLLOUT, 0 } };
+        struct pollfd p[2] = { { tty_fd, POLLIN | POLLOUT, 0 } };
         while (1) {
-            pthread_mutex_lock(&ttyMutex);
+            pthread_mutex_lock(&tty_mutex);
             poll(p, 2, 10);
 
             usleep(100);
 
-            if (sigINTSent)
+            if (sig_int_sent)
             {
-                runKillChildPids();
+                run_kill_child_pids();
                 kill(pid,SIGINT);
-                sigINTSent = false;
+                sig_int_sent = false;
             }
 
-            if ((p[0].revents & POLLIN) && !termNeedsUpdate) {
-                int readValue = read(ttyFD, &terminalBuffer, BUFFER_SIZE);
-                terminalBuffer[readValue] = '\0';
+            if ((p[0].revents & POLLIN) && !term_needs_update) {
+                int readValue = read(tty_fd, &terminal_buffer, BUFFER_SIZE);
+                terminal_buffer[readValue] = '\0';
                 
-                if (tmpLength != 0) {
-                    cutTerminal = (char*)malloc(tmpLength);
-                    memcpy(cutTerminal, terminalBuffer, tmpLength);
-                    cutTerminal[tmpLength] = '\0';
+                if (tmp_length != 0) {
+                    cut_terminal = (char*)malloc(tmp_length);
+                    memcpy(cut_terminal, terminal_buffer, tmp_length);
+                    cut_terminal[tmp_length] = '\0';
                 }
     
-                if (enteredCommand == NULL || cutTerminal == NULL || strlen(enteredCommand) == 0 || strcmp(enteredCommand,cutTerminal) != 0)
-                    termNeedsUpdate = true;
-                else if (strcmp(enteredCommand,cutTerminal) == 0){
-                    removeEscapeCodes(terminalBuffer);
-                    int copySize = strlen(terminalBuffer)-strlen(enteredCommand);
+                if (entered_command == NULL || cut_terminal == NULL || strlen(entered_command) == 0 || strcmp(entered_command,cut_terminal) != 0)
+                    term_needs_update = true;
+                else if (strcmp(entered_command,cut_terminal) == 0){
+                    remove_escape_codes(terminal_buffer);
+                    int copySize = strlen(terminal_buffer)-strlen(entered_command);
                     if (copySize-2 > 0){
-                        memcpy(terminalBuffer,terminalBuffer+strlen(enteredCommand),copySize);
-                        terminalBuffer[copySize] = 0;
-                        termNeedsUpdate = true;
+                        memcpy(terminal_buffer,terminal_buffer+strlen(entered_command),copySize);
+                        terminal_buffer[copySize] = 0;
+                        term_needs_update = true;
                     }
                 }
-                if ((enteredCommand != NULL) && (strlen(enteredCommand) > 0)) {
-                    free(enteredCommand);
-                    enteredCommand = NULL;
+                if ((entered_command != NULL) && (strlen(entered_command) > 0)) {
+                    free(entered_command);
+                    entered_command = NULL;
                 }
-                if (cutTerminal != NULL) {
-                    free(cutTerminal);
-                    cutTerminal = NULL;
+                if (cut_terminal != NULL) {
+                    free(cut_terminal);
+                    cut_terminal = NULL;
                 }
             }
-            else if ((p[0].revents & POLLOUT) && commandReadyToSend) {
-                write(ttyFD, &commandBuffer, sizeof(commandBuffer));
-                commandReadyToSend = false;
-                commandBufferPos = 0;
-                enteredCommand = (char*)malloc(commandBufferLength);
-                memcpy(enteredCommand, commandBuffer, commandBufferLength);
-                enteredCommand[commandBufferLength] = '\0';
-                for (long unsigned int i = 0; i < sizeof(commandBuffer); i++)
-                    commandBuffer[i] = '\0';
-                tmpLength = commandBufferLength;
-                commandBufferLength = 0;
+            else if ((p[0].revents & POLLOUT) && command_ready_to_send) {
+                write(tty_fd, &command_buffer, sizeof(command_buffer));
+                command_ready_to_send = false;
+                command_buffer_pos = 0;
+                entered_command = (char*)malloc(command_buffer_length);
+                memcpy(entered_command, command_buffer, command_buffer_length);
+                entered_command[command_buffer_length] = '\0';
+                for (long unsigned int i = 0; i < sizeof(command_buffer); i++)
+                    command_buffer[i] = '\0';
+                tmp_length = command_buffer_length;
+                command_buffer_length = 0;
             }
-            pthread_mutex_unlock(&ttyMutex);
+            pthread_mutex_unlock(&tty_mutex);
         }
     }
 }
@@ -214,7 +214,7 @@ static void* ttyThread(void* arg)
  * Public functions
  */
 
-bool ul_terminal_prepare_current_terminal(int termWidth, int termHeight) {
+bool ul_terminal_prepare_current_terminal(int term_width, int term_height) {
     reopen_current_terminal();
 
     if (current_fd < 0) {
@@ -245,19 +245,19 @@ bool ul_terminal_prepare_current_terminal(int termWidth, int termHeight) {
         return false;
     }
     
-    pthread_t ttyID;
+    pthread_t tty_id;
 
-    struct termDimen dimen;
+    struct term_dimen dimen;
 
-    dimen.width = termWidth;
-    dimen.height = termHeight;
+    dimen.width = term_width;
+    dimen.height = term_height;
     
-    if (pthread_create(&ttyID, NULL, ttyThread, (void*)&dimen) != 0) {
+    if (pthread_create(&tty_id, NULL, tty_thread, (void*)&dimen) != 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not start TTY thread");
         return false;
     }
 
-    /*if (pthread_join(ttyID, NULL) != 0) {
+    /*if (pthread_join(tty_id, NULL) != 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "TTY thrad did not finish");
         return false;
     }*/
@@ -287,5 +287,5 @@ void ul_terminal_reset_current_terminal(void) {
 
 char* ul_terminal_update_interpret_buffer()
 {
-    return (char*) &terminalBuffer;
+    return (char*) &terminal_buffer;
 }

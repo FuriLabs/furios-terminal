@@ -35,7 +35,7 @@
 /**
  * Prepare the current TTY for graphics output.
  */
-bool ul_terminal_prepare_current_terminal(int termWidth, int termHeight);
+bool ul_terminal_prepare_current_terminal(int term_width, int term_height);
 
 /**
  * Reset the current TTY to text output.
@@ -47,8 +47,8 @@ void ul_terminal_reset_current_terminal(void);
 */
 char* ul_terminal_update_interpret_buffer();
 
-extern bool termNeedsUpdate;
+extern bool term_needs_update;
 
-extern pthread_mutex_t ttyMutex;
+extern pthread_mutex_t tty_mutex;
 
 #endif /* UL_TERMINAL_H */
