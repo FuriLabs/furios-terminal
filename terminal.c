@@ -77,7 +77,7 @@ static void close_current_terminal(void);
 
 static void* ttyThread(void* arg);
 
-static void runAndKillChildPids();
+static void runKillChildPids();
 
 typedef struct termDimen
 {
@@ -115,10 +115,9 @@ static void runKillChildPids()
 {
     char numberBuffer[20];
     sprintf(numberBuffer,"%d",pid);
-    
-    char *commandToSend = (char*)malloc(strlen("pgrep -p ") + strlen(numberBuffer));
+    char *commandToSend = (char*)malloc(strlen("pgrep -P ") + strlen(numberBuffer));
     strcpy(commandToSend,"pgrep -P ");
-    strcpy(commandToSend+strlen("pgrep -p "),numberBuffer);
+    strcpy(commandToSend+strlen("pgrep -P "),numberBuffer);
     FILE *fp = popen(commandToSend,"r");
     free(commandToSend);
     if (fp == NULL)

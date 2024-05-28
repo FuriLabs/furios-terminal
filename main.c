@@ -176,9 +176,13 @@ static void shutdown(void);
  */
 static void sigaction_handler(int signum);
 
-static void updateTTY(lv_timer_t* timer);
+static void updateTTYLoop(lv_timer_t* timer);
 
-static void clearTopTTY();
+static void updateTTY(char * loc, int length);
+
+static void clearTopTTY(char* loc);
+
+static void splitAndAddTTY();
 
 /**
  * Static functions
@@ -401,27 +405,56 @@ static void sigaction_handler(int signum) {
     exit(0);
 }
 
-static void updateTTY(lv_timer_t* timer) {
-        if (termNeedsUpdate) {
-            if (strlen(lv_textarea_get_text(tBox)) >= 9314)
-                clearTopTTY();
-            if (strstr(ul_terminal_update_interpret_buffer(),"\033[2J") != NULL)
-                lv_textarea_set_text(tBox,"");
-            removeEscapeCodes(ul_terminal_update_interpret_buffer());
-            lv_textarea_add_text(tBox, ul_terminal_update_interpret_buffer());
-            termNeedsUpdate = false;
-            for (char* i = ul_terminal_update_interpret_buffer(); i < BUFFER_SIZE+ul_terminal_update_interpret_buffer(); i++)
-                *i = '\0';
-        }
+static void updateTTYLoop(lv_timer_t* timer) {
+    updateTTY(ul_terminal_update_interpret_buffer(),BUFFER_SIZE);
 }
 
-static void clearTopTTY()
+static void updateTTY(char *loc,int length)
+{
+    if (termNeedsUpdate) {
+        int maxlen = length == BUFFER_SIZE ? 9314 : 4096;
+        if (strstr(loc, "\033[2J") != NULL)
+            lv_textarea_set_text(tBox, "");
+        if (strlen(lv_textarea_get_text(tBox)) >= maxlen)
+            clearTopTTY(loc);
+        if ((strlen(lv_textarea_get_text(tBox)) + strlen(loc) >= 4096) && loc == ul_terminal_update_interpret_buffer()) {
+            splitAndAddTTY();
+            return;
+        }
+        removeEscapeCodes(loc);
+        lv_textarea_add_text(tBox, loc);
+        termNeedsUpdate = false;
+        for (char* i = loc; i < length + loc; i++)
+            *i = '\0';
+    }
+}
+
+static void splitAndAddTTY()
+{
+    int i = ((strlen(lv_textarea_get_text(tBox)) + strlen(ul_terminal_update_interpret_buffer())) / 4096) + 1;
+    int j = i;
+    int sectionSize = strlen(ul_terminal_update_interpret_buffer()) / j;
+
+    while (i >= 0) {
+        char* textSection = (char*)malloc(sectionSize+1);
+        memcpy(textSection, ul_terminal_update_interpret_buffer() + ((j - i) * sectionSize), sectionSize);
+        textSection[sectionSize] = '\0';
+        updateTTY(textSection,sectionSize);
+        termNeedsUpdate = true;
+        free(textSection);
+        i--;
+    }
+
+    termNeedsUpdate = false;
+}
+
+static void clearTopTTY(char* loc)
 {
     char* textBuffer = (char*)malloc(strlen(lv_textarea_get_text(tBox)));
 
     strcpy(textBuffer,lv_textarea_get_text(tBox));
 
-    char *newText = textBuffer+strlen(ul_terminal_update_interpret_buffer());
+    char *newText = textBuffer+strlen(loc);
 
     lv_textarea_set_text(tBox,newText);
 
@@ -581,7 +614,7 @@ int main(int argc, char *argv[]) {
     if (!ul_terminal_prepare_current_terminal((int)lv_obj_get_width(tBox),(int)lv_obj_get_height(tBox)))
         lv_textarea_add_text(tBox, "Could not prepare the terminal!");
        
-    lv_timer_t* ttyUpdate = lv_timer_create(updateTTY, 50, NULL);
+    lv_timer_t* ttyUpdate = lv_timer_create(updateTTYLoop, 50, NULL);
 
     /* Run lvgl in "tickless" mode */
     uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
