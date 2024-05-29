@@ -415,17 +415,18 @@ static void update_tty(char *loc,int length, bool split)
         int maxlen = length == BUFFER_SIZE ? 9314 : 4096;
         if (strstr(loc, "\033[2J") != NULL)
             lv_textarea_set_text(t_box, "");
-        if (strlen(lv_textarea_get_text(t_box)) >= maxlen)
-            clear_top_tty(loc);
         if (split) {
             if ((strlen(lv_textarea_get_text(t_box)) + strlen(loc) >= 4096) && loc == ul_terminal_update_interpret_buffer()) {
                 split_and_add_tty();
                 return;
             }
         }
+        if (strlen(lv_textarea_get_text(t_box)) >= maxlen)
+            clear_top_tty(loc);
         remove_escape_codes(loc);
         lv_textarea_add_text(t_box, loc);
-        term_needs_update = false;
+        if (split)
+            term_needs_update = false;
         for (char* i = loc; i < length + loc; i++)
             *i = '\0';
     }
@@ -433,18 +434,18 @@ static void update_tty(char *loc,int length, bool split)
 
 static void split_and_add_tty()
 {
-    int i = ((strlen(lv_textarea_get_text(t_box)) + strlen(ul_terminal_update_interpret_buffer())) / 4096) + 1;
-    int j = i;
+    int j = ((strlen(lv_textarea_get_text(t_box)) + strlen(ul_terminal_update_interpret_buffer())) / 4096) + 1;
     int section_size = strlen(ul_terminal_update_interpret_buffer()) / j;
 
-    while (i >= 0) {
+    for (int i = j; i >=1; i--) {
         char* text_section = (char*)malloc(section_size+1);
         memcpy(text_section, ul_terminal_update_interpret_buffer() + ((j - i) * section_size), section_size);
         text_section[section_size] = '\0';
         update_tty(text_section,section_size,false);
-        term_needs_update = true;
-        free(text_section);
-        i--;
+        if (text_section != NULL) {
+            free(text_section);
+            text_section = NULL;
+        }
     }
 
     term_needs_update = false;
@@ -456,11 +457,14 @@ static void clear_top_tty(char* loc)
 
     strcpy(text_buffer,lv_textarea_get_text(t_box));
 
-    char *newText = text_buffer+strlen(loc);
+    char *new_text = text_buffer+strlen(loc);
 
-    lv_textarea_set_text(t_box,newText);
+    lv_textarea_set_text(t_box,new_text);
 
-    free(text_buffer);
+    if (text_buffer != NULL) {
+        free(text_buffer);
+        text_buffer = NULL;
+    }
 }
 
 /**
