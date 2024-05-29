@@ -178,7 +178,7 @@ static void sigaction_handler(int signum);
 
 static void update_tty_loop(lv_timer_t* timer);
 
-static void update_tty(char * loc, int length);
+static void update_tty(char * loc, int length, bool split);
 
 static void clear_top_tty(char* loc);
 
@@ -406,10 +406,10 @@ static void sigaction_handler(int signum) {
 }
 
 static void update_tty_loop(lv_timer_t* timer) {
-    update_tty(ul_terminal_update_interpret_buffer(),BUFFER_SIZE);
+    update_tty(ul_terminal_update_interpret_buffer(),BUFFER_SIZE,true);
 }
 
-static void update_tty(char *loc,int length)
+static void update_tty(char *loc,int length, bool split)
 {
     if (term_needs_update && length > 0) {
         int maxlen = length == BUFFER_SIZE ? 9314 : 4096;
@@ -417,9 +417,11 @@ static void update_tty(char *loc,int length)
             lv_textarea_set_text(t_box, "");
         if (strlen(lv_textarea_get_text(t_box)) >= maxlen)
             clear_top_tty(loc);
-        if ((strlen(lv_textarea_get_text(t_box)) + strlen(loc) >= 4096) && loc == ul_terminal_update_interpret_buffer()) {
-            split_and_add_tty();
-            return;
+        if (split) {
+            if ((strlen(lv_textarea_get_text(t_box)) + strlen(loc) >= 4096) && loc == ul_terminal_update_interpret_buffer()) {
+                split_and_add_tty();
+                return;
+            }
         }
         remove_escape_codes(loc);
         lv_textarea_add_text(t_box, loc);
@@ -439,7 +441,7 @@ static void split_and_add_tty()
         char* text_section = (char*)malloc(section_size+1);
         memcpy(text_section, ul_terminal_update_interpret_buffer() + ((j - i) * section_size), section_size);
         text_section[section_size] = '\0';
-        update_tty(text_section,section_size);
+        update_tty(text_section,section_size,false);
         term_needs_update = true;
         free(text_section);
         i--;
