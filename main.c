@@ -453,18 +453,13 @@ static void split_and_add_tty()
 
 static void clear_top_tty(char* loc)
 {
-    char* text_buffer = (char*)malloc(strlen(lv_textarea_get_text(t_box)));
+    char text_buffer[9314];
 
     strcpy(text_buffer,lv_textarea_get_text(t_box));
 
     char *new_text = text_buffer+strlen(loc);
 
     lv_textarea_set_text(t_box,new_text);
-
-    if (text_buffer != NULL) {
-        free(text_buffer);
-        text_buffer = NULL;
-    }
 }
 
 /**
