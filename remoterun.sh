@@ -1,4 +1,5 @@
 #!/bin/bash
-rsync -avz --progress * droidian@$1:"/home/droidian/furios-terminal/"
-ssh droidian@$1 "pkill -f furios-terminal"
-ssh droidian@$1 "cd /home/droidian/furios-terminal; meson compile -C build; sudo -S ./build/furios-terminal;"
+ssh-copy-id $1@$2
+rsync -avz --progress * $1@$2:"/home/furios/furios-terminal/"
+ssh $1@$2 "pkill -f furios-terminal"
+ssh $1@$2 "cd /home/furios/furios-terminal; meson compile -C build; sudo -S ./build/furios-terminal;"
