@@ -17,16 +17,18 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdbool.h>
+
 void remove_escape_codes(char *buffer)
 {
     char *src = buffer;
     char *dst = buffer;
-    int inside_escape = 0;
+    bool inside_escape = false;
 
     // Iterate through the string character by character
     while (*src != '\0') {
         if (*src == '\x1B') {  // Found ESC character, indicating start of escape sequence
-            inside_escape = 1;
+            inside_escape = true;
         }
 
         if (!inside_escape) {
@@ -35,8 +37,8 @@ void remove_escape_codes(char *buffer)
             dst++;
         }
 
-        if (inside_escape && (*src == 'h' || *src == 'm')) {  // Found end of escape sequence
-            inside_escape = 0;
+        if (inside_escape && (*src == '\x0D' || *src == 'h' || *src == 'm')) {  // Found end of escape sequence
+            inside_escape = false;
         }
 
         src++;  // Move to the next character
