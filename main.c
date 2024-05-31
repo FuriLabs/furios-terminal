@@ -52,6 +52,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include <sys/reboot.h>
 #include <sys/time.h>
@@ -183,6 +184,8 @@ static void update_tty(char * loc, int length, bool split);
 static void clear_top_tty(char* loc);
 
 static void split_and_add_tty();
+
+static void clean_illegal_chars(char *loc);
 
 /**
  * Static functions
@@ -423,8 +426,13 @@ static void update_tty(char *loc,int length, bool split)
         }
         if (strlen(lv_textarea_get_text(t_box)) >= maxlen)
             clear_top_tty(loc);
+        
         remove_escape_codes(loc);
+        
+        clean_illegal_chars(loc);
+        
         lv_textarea_add_text(t_box, loc);
+        
         if (split)
             term_needs_update = false;
         for (char* i = loc; i < length + loc; i++)
@@ -460,6 +468,19 @@ static void clear_top_tty(char* loc)
     char *new_text = text_buffer+strlen(loc);
 
     lv_textarea_set_text(t_box,new_text);
+}
+
+static void clean_illegal_chars(char *loc)
+{
+    char *src = loc, *dst = loc;
+
+    while (*src != 0) {
+        if (isalnum((unsigned char)*src) || ispunct((unsigned char)*src) || isspace((unsigned char)*src)) {
+            *dst++ = *src;
+        }
+        src++;
+    }
+    *dst = '\0';
 }
 
 /**
