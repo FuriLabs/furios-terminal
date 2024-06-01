@@ -75,26 +75,6 @@ lv_obj_t* t_box = NULL;
  * Static prototypes
  */
 
-
-/**
- * Handle LV_EVENT_CLICKED events from the show/hide password toggle button.
- *
- * @param event the event object
- */
-static void toggle_pw_btn_clicked_cb(lv_event_t *event);
-
-/**
- * Toggle between showing and hiding the password.
- */
-static void toggle_password_obscured(void);
-
-/**
- * Show / hide the password.
- *
- * @param is_hidden true if the password should be hidden, false if it should be shown
- */
-static void set_password_obscured(bool is_obscured);
-
 /**
  * Handle LV_EVENT_CLICKED events from the show/hide keyboard toggle button.
  *
@@ -123,11 +103,6 @@ static void set_keyboard_hidden(bool is_hidden);
 static void keyboard_anim_y_cb(void* obj, int32_t value);
 
 /**
- * Handle LV_EVENT_CLICKED events from the factory reset failed messsage box
- */
-static void close_mbox_cb(lv_event_t *event);
-
-/**
  * Handle LV_EVENT_VALUE_CHANGED events from the keyboard widget.
  *
  * @param event the event object
@@ -141,34 +116,7 @@ static void keyboard_value_changed_cb(lv_event_t *event);
  */
 static void keyboard_ready_cb(lv_event_t *event);
 
-/**
- * Handle LV_EVENT_READY events from the textarea widget.
- *
- * @param event the event object
- */
-static void textarea_ready_cb(lv_event_t *event);
-
-/**
- * Print out the entered password and exit.
- *
- * @param textarea the textarea widget
- */
-static void print_password_and_exit(lv_obj_t *textarea);
-
-/**
- * Factory resets the device
- */
-static void factory_reset(void);
-
-/**
- * Decrypts the device
- */
-static void decrypt(void);
-
-/**
- * Shuts down the device.
- */
-static void shutdown(void);
+static void send_sig_term();
 
 /**
  * Handle termination signals sent to the process.
@@ -190,20 +138,6 @@ static void clean_illegal_chars(char *loc);
 /**
  * Static functions
  */
-static void toggle_pw_btn_clicked_cb(lv_event_t *event) {
-    LV_UNUSED(event);
-    toggle_password_obscured();
-}
-
-static void toggle_password_obscured(void) {
-    is_password_obscured = !is_password_obscured;
-    set_password_obscured(is_password_obscured);
-}
-
-static void set_password_obscured(bool is_obscured) {
-    lv_obj_t *textarea = lv_keyboard_get_textarea(keyboard);
-    lv_textarea_set_password_mode(textarea, is_obscured);
-}
 
 static void toggle_kb_btn_clicked_cb(lv_event_t *event) {
     LV_UNUSED(event);
@@ -235,11 +169,6 @@ static void keyboard_anim_y_cb(void* obj, int32_t value) {
     lv_obj_set_y(obj, value);
 }
 
-static void close_mbox_cb(lv_event_t *event) {
-    lv_obj_t *mbox = lv_event_get_current_target(event);
-    lv_msgbox_close(mbox);
-}
-
 static void keyboard_value_changed_cb(lv_event_t *event) {
     lv_obj_t *kb = lv_event_get_target(event);
 
@@ -257,154 +186,15 @@ static void keyboard_value_changed_cb(lv_event_t *event) {
 }
 
 static void keyboard_ready_cb(lv_event_t *event) {
-    print_password_and_exit(lv_keyboard_get_textarea(lv_event_get_target(event)));
+    send_sig_term();
 }
 
-static void textarea_ready_cb(lv_event_t *event) {
-    print_password_and_exit(lv_event_get_target(event));
-}
-
-static void print_password_and_exit(lv_obj_t *textarea) {
-    printf("%s\n", lv_textarea_get_text(textarea));
+static void send_sig_term() {
     sigaction_handler(SIGTERM);
-}
-
-static void factory_reset(void) {
-    sleep(5);
-}
-
-static void decrypt(void) {
-    uint32_t hor_res = 0;
-    uint32_t ver_res = 0;
-    uint32_t dpi = 0;
-
-    switch (conf_opts.general.backend) {
-#if USE_FBDEV
-    case UL_BACKENDS_BACKEND_FBDEV:
-        fbdev_get_sizes(&hor_res, &ver_res, &dpi);
-        break;
-#endif /* USE_FBDEV */
-#if USE_DRM
-    case UL_BACKENDS_BACKEND_DRM:
-        drm_get_sizes((lv_coord_t *)&hor_res, (lv_coord_t *)&ver_res, &dpi);
-        break;
-#endif /* USE_DRM */
-#if USE_MINUI
-    case UL_BACKENDS_BACKEND_MINUI:
-        minui_get_sizes(&hor_res, &ver_res, &dpi);
-        break;
-#endif /* USE_MINUI */
-    default:
-        ul_log(UL_LOG_LEVEL_ERROR, "Unable to find suitable backend");
-        exit(EXIT_FAILURE);
-    }
-
-    /* Prevent scrolling when keyboard is off-screen */
-    lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
-
-    /* Figure out a few numbers for sizing and positioning */
-    const int keyboard_height = ver_res > hor_res ? ver_res / 3 : ver_res / 2;
-    const int padding = keyboard_height / 8;
-    const int label_width = hor_res - 2 * padding;
-    const int textarea_container_max_width = LV_MIN(hor_res, ver_res);
-
-    /* Main flexbox */
-    lv_obj_t *container = lv_obj_create(lv_scr_act());
-    lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_size(container, LV_PCT(100), ver_res - keyboard_height);
-    lv_obj_set_pos(container, 0, 0);
-    lv_obj_set_style_pad_row(container, padding, LV_PART_MAIN);
-    lv_obj_set_style_pad_bottom(container, padding, LV_PART_MAIN);
-
-    /* Label container */
-    lv_obj_t *label_container = lv_obj_create(container);
-    lv_obj_set_size(label_container, label_width, LV_PCT(100));
-    lv_obj_set_flex_grow(label_container, 1);
-
-    /* Label */
-    lv_obj_t *spangroup = lv_spangroup_create(label_container);
-    lv_spangroup_set_align(spangroup, LV_TEXT_ALIGN_CENTER);
-    lv_spangroup_set_mode(spangroup, LV_SPAN_MODE_BREAK);
-    lv_spangroup_set_overflow(spangroup, LV_SPAN_OVERFLOW_ELLIPSIS);
-    lv_span_t *span1 = lv_spangroup_new_span(spangroup);
-
-    /* Label text */
-    lv_span_set_text(span1, "Password required for factory reset");
-
-    /* Size label to content */
-    const lv_coord_t label_height = lv_spangroup_get_expand_height(spangroup, label_width);
-    lv_obj_set_style_max_height(spangroup, LV_PCT(100), LV_PART_MAIN);
-    lv_obj_set_size(spangroup, label_width, label_height);
-    lv_obj_set_align(spangroup, LV_ALIGN_BOTTOM_MID);
-
-    /* Textarea flexbox */
-    lv_obj_t *textarea_container = lv_obj_create(container);
-    lv_obj_set_size(textarea_container, LV_PCT(100), LV_SIZE_CONTENT);
-    lv_obj_set_style_max_width(textarea_container, textarea_container_max_width, LV_PART_MAIN);
-    lv_obj_set_flex_flow(textarea_container, LV_FLEX_FLOW_ROW);
-    lv_obj_set_flex_align(textarea_container, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_left(textarea_container, padding, LV_PART_MAIN);
-    lv_obj_set_style_pad_right(textarea_container, padding, LV_PART_MAIN);
-
-    /* Textarea */
-    lv_obj_t *textarea = lv_textarea_create(textarea_container);
-    lv_textarea_set_one_line(textarea, true);
-    lv_textarea_set_password_mode(textarea, true);
-    lv_textarea_set_password_bullet(textarea, conf_opts.textarea.bullet);
-    lv_textarea_set_placeholder_text(textarea, "Enter password...");
-    lv_obj_add_event_cb(textarea, textarea_ready_cb, LV_EVENT_READY, NULL);
-    lv_obj_set_flex_grow(textarea, 1);
-    lv_obj_add_state(textarea, LV_STATE_FOCUSED);
-
-    /* Route physical keyboard input into textarea */
-    ul_indev_set_up_textarea_for_keyboard_input(textarea);
-
-    /* Reveal / obscure password button */
-    lv_obj_t *toggle_pw_btn = lv_btn_create(textarea_container);
-    const int textarea_height = lv_obj_get_height(textarea);
-    lv_obj_set_size(toggle_pw_btn, textarea_height, textarea_height);
-    lv_obj_t *toggle_pw_btn_label = lv_label_create(toggle_pw_btn);
-    lv_obj_center(toggle_pw_btn_label);
-    lv_label_set_text(toggle_pw_btn_label, LV_SYMBOL_EYE_OPEN);
-    lv_obj_add_event_cb(toggle_pw_btn, toggle_pw_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-
-    /* Show / hide keyboard button */
-    lv_obj_t *toggle_kb_btn = lv_btn_create(textarea_container);
-    lv_obj_set_size(toggle_kb_btn, textarea_height, textarea_height);
-    lv_obj_add_event_cb(toggle_kb_btn, toggle_kb_btn_clicked_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *toggle_kb_btn_label = lv_label_create(toggle_kb_btn);
-    lv_label_set_text(toggle_kb_btn_label, LV_SYMBOL_KEYBOARD);
-    lv_obj_center(toggle_kb_btn_label);
-
-    /* Hide label if it clips veritcally */
-    if (label_height > lv_obj_get_height(label_container)) {
-        lv_obj_set_height(spangroup, 0);
-    }
-
-    /* Keyboard (after textarea / label so that key popovers are not drawn over) */
-    keyboard = lv_keyboard_create(lv_scr_act());
-    lv_keyboard_set_mode(keyboard, LV_KEYBOARD_MODE_TEXT_LOWER);
-    lv_keyboard_set_textarea(keyboard, textarea);
-    lv_obj_remove_event_cb(keyboard, lv_keyboard_def_event_cb);
-    lv_obj_add_event_cb(keyboard, keyboard_value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
-    lv_obj_add_event_cb(keyboard, keyboard_ready_cb, LV_EVENT_READY, NULL);
-    lv_obj_set_pos(keyboard, 0, is_keyboard_hidden ? keyboard_height : 0);
-    lv_obj_set_size(keyboard, hor_res, keyboard_height);
-    ul_theme_prepare_keyboard(keyboard);
-
-    /* Apply textarea options */
-    set_password_obscured(conf_opts.textarea.obscured);
-}
-
-static void shutdown(void) {
-    sync();
-    reboot(RB_POWER_OFF);
 }
 
 static void sigaction_handler(int signum) {
     LV_UNUSED(signum);
-    ul_terminal_reset_current_terminal();
     exit(0);
 }
 

@@ -63,18 +63,6 @@ pthread_mutex_t tty_mutex;
  * Static prototypes
  */
 
-/**
- * Close the current file descriptor and reopen /dev/tty0.
- * 
- * @return true if opening was successful, false otherwise
- */
-static bool reopen_current_terminal(void);
-
-/**
- * Close the current file descriptor.
- */
-static void close_current_terminal(void);
-
 static void* tty_thread(void* arg);
 
 static void run_kill_child_pids();
@@ -88,28 +76,6 @@ typedef struct term_dimen
 /**
  * Static functions
  */
-
-static bool reopen_current_terminal(void) {
-    close_current_terminal();
-
-    current_fd = open("/dev/tty0", O_RDWR);
-	if (current_fd < 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not open /dev/tty0");
-		return false;
-	}
-
-    return true;
-}
-
-static void close_current_terminal(void) {
-    if (current_fd < 0) {
-        return;
-    }
-
-    close(current_fd);
-    current_fd = -1;
-}
-
 
 static void run_kill_child_pids()
 {
@@ -215,36 +181,7 @@ static void* tty_thread(void* arg)
  */
 
 bool ul_terminal_prepare_current_terminal(int term_width, int term_height) {
-    reopen_current_terminal();
 
-    if (current_fd < 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not prepare current terminal");
-        return false;
-    }
-
-    // NB: The order of calls appears to matter for some devices. See
-    // https://gitlab.com/cherrypicker/unl0kr/-/issues/34 for further info.
-
-    if (ioctl(current_fd, KDGKBMODE, &original_kb_mode) != 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not get terminal keyboard mode");
-        return false;
-    }
-
-    if (ioctl(current_fd, KDSKBMODE, K_OFF) != 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not set terminal keyboard mode to off");
-        return false;
-    }
-
-    if (ioctl(current_fd, KDGETMODE, &original_mode) != 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not get terminal mode");
-        return false;
-    }
-
-    if (ioctl(current_fd, KDSETMODE, KD_GRAPHICS) != 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not set terminal mode to graphics");
-        return false;
-    }
-    
     pthread_t tty_id;
 
     struct term_dimen dimen;
@@ -257,32 +194,7 @@ bool ul_terminal_prepare_current_terminal(int term_width, int term_height) {
         return false;
     }
 
-    /*if (pthread_join(tty_id, NULL) != 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "TTY thrad did not finish");
-        return false;
-    }*/
-
     return true;
-}
-
-void ul_terminal_reset_current_terminal(void) {
-    if (current_fd < 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not reset current terminal");
-        return;
-    }
-
-    // NB: The order of calls appears to matter for some devices. See
-    // https://gitlab.com/cherrypicker/unl0kr/-/issues/34 for further info.
-
-    if (ioctl(current_fd, KDSETMODE, original_mode) != 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not reset terminal mode");
-    }
-
-    if (ioctl(current_fd, KDSKBMODE, original_kb_mode) != 0) {
-        ul_log(UL_LOG_LEVEL_WARNING, "Could not reset terminal keyboard mode");
-    }
-
-    close_current_terminal();
 }
 
 char* ul_terminal_update_interpret_buffer()
