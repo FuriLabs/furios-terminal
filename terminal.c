@@ -53,6 +53,7 @@ static int original_kb_mode = K_UNICODE;
 static char terminal_buffer[BUFFER_SIZE];
 
 static int pid = 0;
+static int sig_int_pid = -1;
 static int tty_fd = 0;
 
 bool term_needs_update = false;
@@ -80,7 +81,7 @@ typedef struct term_dimen
 static void run_kill_child_pids()
 {
     char number_buffer[20];
-    sprintf(number_buffer,"%d",pid);
+    sprintf(number_buffer,"%d",sig_int_pid);
     char *command_to_send = (char*)malloc(strlen("pgrep -P ") + strlen(number_buffer));
     strcpy(command_to_send,"pgrep -P ");
     strcpy(command_to_send+strlen("pgrep -P "),number_buffer);
@@ -103,6 +104,8 @@ static void* tty_thread(void* arg)
     ws.ws_col = tty_dimen->width / 8; //max width of font_32
     ws.ws_row = tty_dimen->height / 16; //max height of font_32
     pid = forkpty(&tty_fd, NULL, NULL, &ws);
+    if (sig_int_pid < 0)
+        sig_int_pid = pid;
 
     char* entered_command = NULL;
     char* cut_terminal = NULL;
