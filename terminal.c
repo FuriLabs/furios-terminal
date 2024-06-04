@@ -143,12 +143,21 @@ static void* tty_thread(void* arg)
     
                 if (entered_command == NULL || cut_terminal == NULL || strlen(entered_command) == 0 || strcmp(entered_command,cut_terminal) != 0)
                     term_needs_update = true;
-                else if (strcmp(entered_command,cut_terminal) == 0){
+                else if (strcmp(entered_command, cut_terminal) == 0) {
                     remove_escape_codes(terminal_buffer);
-                    int copySize = strlen(terminal_buffer)-strlen(entered_command);
-                    if (copySize-2 > 0){
-                        memcpy(terminal_buffer,terminal_buffer+strlen(entered_command),copySize);
-                        terminal_buffer[copySize] = 0;
+                    for (int i = 0; i < strlen(terminal_buffer) - 1; i++)
+                    {
+                        if (terminal_buffer[i] == 0x5e && terminal_buffer[i + 1] == 0x40)
+                        {
+                            terminal_buffer[i] = '\n';
+                            terminal_buffer[i+1] = '\n';
+                        }
+                    }
+                    int old_term_length = strlen(terminal_buffer);
+                    int copy_size = old_term_length - strlen(entered_command);
+                    if (copy_size-2 > 0){
+                        memcpy(terminal_buffer,terminal_buffer+strlen(entered_command), copy_size);
+                        terminal_buffer[copy_size] = 0;
                         term_needs_update = true;
                     }
                 }
