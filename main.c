@@ -29,7 +29,6 @@
 #include "terminal.h"
 #include "theme.h"
 #include "themes.h"
-#include "lvm.h"
 #include "termstr.h"
 
 #include "lv_drv_conf.h"

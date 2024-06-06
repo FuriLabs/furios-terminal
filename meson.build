@@ -41,7 +41,6 @@ furios_terminal_sources = [
   'terminal.c',
   'theme.c',
   'themes.c',
-  'lvm.c',
   'termstr.c',
 ]
 
@@ -53,7 +52,6 @@ furios_terminal_dependencies = [
   dependency('inih', static: enable_static),
   dependency('libinput', static: enable_static),
   dependency('xkbcommon', static: enable_static),
-  dependency('libcryptsetup', static: enable_static),
 ]
 
 cc = meson.get_compiler('c')

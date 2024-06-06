@@ -71,8 +71,6 @@ static void print_usage() {
         /*-------------------------------- 78 CHARS --------------------------------*/
         "Usage: furios-terminal [OPTION]\n"
         "\n"
-        "furios-terminal values the CRYPTTAB_TRIED variable. Upon completion, the entered\n"
-        "password is printed to STDOUT. All other output happens on STDERR.\n"
         "\n"
         "Mandatory arguments to long options are mandatory for short options too.\n"
         "  -c, --config=PATH         Locaton of the main config file. Defaults to\n"
