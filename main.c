@@ -75,13 +75,6 @@ lv_obj_t* t_box = NULL;
  */
 
 /**
- * Handle LV_EVENT_CLICKED events from the show/hide keyboard toggle button.
- *
- * @param event the event object
- */
-static void toggle_kb_btn_clicked_cb(lv_event_t *event);
-
-/**
  * Toggle between showing and hiding the keyboard.
  */
 static void toggle_keyboard_hidden(void);
@@ -138,11 +131,6 @@ static void clean_illegal_chars(char *loc);
  * Static functions
  */
 
-static void toggle_kb_btn_clicked_cb(lv_event_t *event) {
-    LV_UNUSED(event);
-    toggle_keyboard_hidden();
-}
-
 static void toggle_keyboard_hidden(void) {
     is_keyboard_hidden = !is_keyboard_hidden;
     set_keyboard_hidden(is_keyboard_hidden);
@@ -185,6 +173,7 @@ static void keyboard_value_changed_cb(lv_event_t *event) {
 }
 
 static void keyboard_ready_cb(lv_event_t *event) {
+    LV_UNUSED(event);
     send_sig_term();
 }
 
@@ -198,6 +187,7 @@ static void sigaction_handler(int signum) {
 }
 
 static void update_tty_loop(lv_timer_t* timer) {
+    LV_UNUSED(timer);
     update_tty(ul_terminal_update_interpret_buffer(),BUFFER_SIZE,true);
 }
 
@@ -213,15 +203,14 @@ static void update_tty(char *loc,int length, bool split)
                 return;
             }
         }
-        if (strlen(lv_textarea_get_text(t_box)) >= maxlen)
+
+        if (strlen(lv_textarea_get_text(t_box)) >= (size_t)maxlen)
             clear_top_tty(loc);
-        
+
         remove_escape_codes(loc);
-        
         clean_illegal_chars(loc);
-        
         lv_textarea_add_text(t_box, loc);
-        
+
         if (split)
             term_needs_update = false;
         for (char* i = loc; i < length + loc; i++)
@@ -424,17 +413,11 @@ int main(int argc, char *argv[]) {
 
     if (!ul_terminal_prepare_current_terminal((int)lv_obj_get_width(t_box),(int)lv_obj_get_height(t_box)))
         lv_textarea_add_text(t_box, "Could not prepare the terminal!");
-       
-    lv_timer_t* tty_update = lv_timer_create(update_tty_loop, 50, NULL);
 
-    /* Run lvgl in "tickless" mode */
-    uint32_t timeout = conf_opts.general.timeout * 1000; /* ms */
+    lv_timer_create(update_tty_loop, 50, NULL);
+
     while(1) {
-        if (!timeout || lv_disp_get_inactive_time(NULL) < timeout) {
-            lv_task_handler();
-        } else if (timeout) {
-            shutdown();
-        }
+        lv_task_handler();
         usleep(5000);
     }
 
