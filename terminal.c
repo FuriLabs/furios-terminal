@@ -68,6 +68,8 @@ static void* tty_thread(void* arg);
 
 static void run_kill_child_pids();
 
+static void clean_command_buffer();
+
 typedef struct term_dimen
 {
     int width;
@@ -94,6 +96,14 @@ static void run_kill_child_pids()
         kill(atoi(number_buffer),SIGINT);
 
     pclose(fp);
+}
+
+static void clean_command_buffer()
+{
+    command_buffer_pos = 0;
+    command_buffer_length = 0;
+    for (long unsigned int i = 0; i < sizeof(command_buffer); i++)
+        command_buffer[i] = '\0';
 }
 
 static void* tty_thread(void* arg)
@@ -129,6 +139,7 @@ static void* tty_thread(void* arg)
                 run_kill_child_pids();
                 kill(pid,SIGINT);
                 sig_int_sent = false;
+                clean_command_buffer();
             }
 
             if ((p[0].revents & POLLIN) && !term_needs_update) {
@@ -153,8 +164,7 @@ static void* tty_thread(void* arg)
                             terminal_buffer[i+1] = '\n';
                         }
                     }
-                    int old_term_length = strlen(terminal_buffer);
-                    int copy_size = old_term_length - strlen(entered_command);
+                    int copy_size = strlen(terminal_buffer) - strlen(entered_command);
                     if (copy_size-2 > 0){
                         memcpy(terminal_buffer,terminal_buffer+strlen(entered_command), copy_size);
                         terminal_buffer[copy_size] = 0;
@@ -173,14 +183,11 @@ static void* tty_thread(void* arg)
             else if ((p[0].revents & POLLOUT) && command_ready_to_send) {
                 write(tty_fd, &command_buffer, sizeof(command_buffer));
                 command_ready_to_send = false;
-                command_buffer_pos = 0;
                 entered_command = (char*)malloc(command_buffer_length);
                 memcpy(entered_command, command_buffer, command_buffer_length);
                 entered_command[command_buffer_length] = '\0';
-                for (long unsigned int i = 0; i < sizeof(command_buffer); i++)
-                    command_buffer[i] = '\0';
                 tmp_length = command_buffer_length;
-                command_buffer_length = 0;
+                clean_command_buffer();
             }
             pthread_mutex_unlock(&tty_mutex);
         }
