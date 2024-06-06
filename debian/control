@@ -7,7 +7,6 @@ Build-Depends: debhelper-compat (= 13),
                libxkbcommon-dev,
                libdrm-dev,
                libminui-dev,
-               libcryptsetup-dev,
                meson (>= 0.53.0),
                pkg-config,
 Standards-Version: 4.6.1.0

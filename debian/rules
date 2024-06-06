@@ -13,4 +13,4 @@ override_dh_installinitramfs:
 
 override_dh_auto_install:
 	dh_auto_install
-	cp $(CURDIR)/debian/furios-terminal.droidian.conf $(CURDIR)/debian/furios-terminal/etc/furios-terminal.conf
+	cp $(CURDIR)/debian/furios-terminal.furios.conf $(CURDIR)/debian/furios-terminal/etc/furios-terminal.conf
