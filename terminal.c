@@ -45,11 +45,6 @@
  * Static variables
  */
 
-static int current_fd = -1;
-
-static int original_mode = KD_TEXT;
-static int original_kb_mode = K_UNICODE;
-
 static char terminal_buffer[BUFFER_SIZE];
 
 static int pid = 0;
@@ -74,7 +69,7 @@ typedef struct term_dimen
 {
     int width;
     int height;
-};
+} term_dimen;
 
 /**
  * Static functions
@@ -91,7 +86,7 @@ static void run_kill_child_pids()
     free(command_to_send);
     if (fp == NULL)
         return;
-    
+
     while (fgets(number_buffer,20,fp) != NULL)
         kill(atoi(number_buffer),SIGINT);
 
@@ -108,7 +103,7 @@ static void clean_command_buffer()
 
 static void* tty_thread(void* arg)
 {
-    struct winsize ws = {};
+    struct winsize ws = {0};
     struct term_dimen *tty_dimen = (struct term_dimen*)arg;
 
     ws.ws_col = tty_dimen->width / 8; //max width of font_32
@@ -120,13 +115,13 @@ static void* tty_thread(void* arg)
     char* entered_command = NULL;
     char* cut_terminal = NULL;
     int tmp_length = 0;
-    
+
     if (pid == 0) {
         putenv("TERM=xterm");
         char* args[] = { getenv("SHELL"),"-l","-i", NULL};
-        execl(args[0], args, NULL);
-    }
-    else {
+//        execl(args[0], args, NULL);
+        execvp(args[0], args);
+    } else {
         struct pollfd p[2] = { { tty_fd, POLLIN | POLLOUT, 0 } };
         while (1) {
             pthread_mutex_lock(&tty_mutex);
@@ -145,18 +140,18 @@ static void* tty_thread(void* arg)
             if ((p[0].revents & POLLIN) && !term_needs_update) {
                 int readValue = read(tty_fd, &terminal_buffer, BUFFER_SIZE);
                 terminal_buffer[readValue] = '\0';
-                
+
                 if (tmp_length != 0) {
                     cut_terminal = (char*)malloc(tmp_length);
                     memcpy(cut_terminal, terminal_buffer, tmp_length);
                     cut_terminal[tmp_length] = '\0';
                 }
-    
+
                 if (entered_command == NULL || cut_terminal == NULL || strlen(entered_command) == 0 || strcmp(entered_command,cut_terminal) != 0)
                     term_needs_update = true;
                 else if (strcmp(entered_command, cut_terminal) == 0) {
                     remove_escape_codes(terminal_buffer);
-                    for (int i = 0; i < strlen(terminal_buffer) - 1; i++)
+                    for (size_t i = 0; i < strlen(terminal_buffer) - 1; i++)
                     {
                         if (terminal_buffer[i] == 0x5e && terminal_buffer[i + 1] == 0x40)
                         {
@@ -192,6 +187,8 @@ static void* tty_thread(void* arg)
             pthread_mutex_unlock(&tty_mutex);
         }
     }
+
+    return NULL;
 }
 
 
@@ -207,7 +204,7 @@ bool ul_terminal_prepare_current_terminal(int term_width, int term_height) {
 
     dimen.width = term_width;
     dimen.height = term_height;
-    
+
     if (pthread_create(&tty_id, NULL, tty_thread, (void*)&dimen) != 0) {
         ul_log(UL_LOG_LEVEL_WARNING, "Could not start TTY thread");
         return false;
