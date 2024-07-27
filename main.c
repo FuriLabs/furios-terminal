@@ -142,6 +142,8 @@ static void clean_illegal_chars(char *loc);
 
 static bool is_time_to_update();
 
+static void back_button_event_handler(lv_event_t * e);
+
 /**
  * Static functions
  */
@@ -321,6 +323,11 @@ static inline bool is_time_to_update() {
     return false;
 }
 
+static void back_button_event_handler(lv_event_t * e) {
+    LV_UNUSED(e);
+    exit(0);
+}
+
 /**
  * Main
  */
@@ -438,6 +445,16 @@ int main(int argc, char *argv[]) {
     lv_obj_set_width(top_label_container, LV_PCT(100));
     lv_obj_set_height(top_label_container, LV_SIZE_CONTENT);
     lv_obj_set_align(top_label_container, LV_ALIGN_TOP_MID);
+
+    /* Back button */
+    lv_obj_t *back_btn = lv_btn_create(top_label_container);
+    lv_obj_set_size(back_btn, 80, 80);
+    lv_obj_align(back_btn, LV_ALIGN_TOP_LEFT, 150, 10);
+    lv_obj_add_event_cb(back_btn, back_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *back_label = lv_label_create(back_btn);
+    lv_label_set_text(back_label, LV_SYMBOL_LEFT);
+    lv_obj_center(back_label);
 
     /* Top label text */
     lv_obj_t *furios_label = lv_label_create(top_label_container);
