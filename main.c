@@ -77,6 +77,12 @@ lv_obj_t* t_box = NULL;
 static char previous_content[BUFFER_SIZE] = {0};
 static struct timespec last_update_time = {0, 0};
 
+pthread_t tty_update_thread;
+pthread_mutex_t tty_updater_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t tty_cond = PTHREAD_COND_INITIALIZER;
+bool tty_thread_running = true;
+bool tty_update_needed = false;
+
 /**
  * Static prototypes
  */
@@ -124,7 +130,11 @@ static void send_sig_term();
  */
 static void sigaction_handler(int signum);
 
+static void request_tty_update(void);
+
 static void update_tty(char * loc, int length, bool split);
+
+static void* tty_update_thread_func(void* arg);
 
 static void split_and_add_tty();
 
@@ -191,8 +201,43 @@ static void sigaction_handler(int signum) {
     exit(0);
 }
 
-static void update_tty(char *loc, int length, bool split)
-{
+static void request_tty_update(void) {
+    pthread_mutex_lock(&tty_updater_mutex);
+    tty_update_needed = true;
+    pthread_cond_signal(&tty_cond);
+    pthread_mutex_unlock(&tty_updater_mutex);
+}
+
+static void update_tty_main_thread(void* buffer) {
+    update_tty((char*)buffer, BUFFER_SIZE, true);
+    lv_obj_invalidate(t_box);
+}
+
+static void* tty_update_thread_func(void* arg) {
+    LV_UNUSED(arg);
+
+    while (tty_thread_running) {
+        pthread_mutex_lock(&tty_updater_mutex);
+        while (!tty_update_needed && tty_thread_running) {
+            pthread_cond_wait(&tty_cond, &tty_updater_mutex);
+        }
+
+        if (!tty_thread_running) {
+            pthread_mutex_unlock(&tty_updater_mutex);
+            break;
+        }
+
+        tty_update_needed = false;
+        pthread_mutex_unlock(&tty_updater_mutex);
+
+        char* buffer = ul_terminal_update_interpret_buffer();
+
+        lv_async_call(update_tty_main_thread, buffer);
+    }
+    return NULL;
+}
+
+static void update_tty(char *loc, int length, bool split) {
     if (!term_needs_update || length <= 0)
         return;
 
@@ -202,24 +247,23 @@ static void update_tty(char *loc, int length, bool split)
     if (strstr(loc, "\033[2J") != NULL) {
         lv_textarea_set_text(t_box, "");
     } else {
-        if (split && strlen(lv_textarea_get_text(t_box)) + length >= MAX_TEXTAREA_LENGTH && loc == ul_terminal_update_interpret_buffer()) {
-            split_and_add_tty();
-            return;
-        }
-
-        size_t current_length = strlen(lv_textarea_get_text(t_box));
-        if (current_length >= MAX_TEXTAREA_LENGTH) {
-            size_t overflow = current_length + length - MAX_TEXTAREA_LENGTH;
-            if (overflow > 0) {
-                lv_textarea_set_cursor_pos(t_box, 0);
-                lv_textarea_del_char_forward(t_box);
-                lv_textarea_set_cursor_pos(t_box, LV_TEXTAREA_CURSOR_LAST);
+        if (split && strlen(lv_textarea_get_text(t_box)) + length >= MAX_TEXTAREA_LENGTH) {
+            split_and_add_tty(loc);
+        } else {
+            size_t current_length = strlen(lv_textarea_get_text(t_box));
+            if (current_length >= MAX_TEXTAREA_LENGTH) {
+                size_t overflow = current_length + length - MAX_TEXTAREA_LENGTH;
+                if (overflow > 0) {
+                    lv_textarea_set_cursor_pos(t_box, 0);
+                    lv_textarea_del_char_forward(t_box);
+                    lv_textarea_set_cursor_pos(t_box, LV_TEXTAREA_CURSOR_LAST);
+                }
             }
-        }
 
-        remove_escape_codes(loc);
-        clean_illegal_chars(loc);
-        lv_textarea_add_text(t_box, loc);
+            remove_escape_codes(loc);
+            clean_illegal_chars(loc);
+            lv_textarea_add_text(t_box, loc);
+        }
     }
 
     if (split)
@@ -227,8 +271,6 @@ static void update_tty(char *loc, int length, bool split)
 
     memcpy(previous_content, loc, length);
     memset(loc, 0, length);
-
-    lv_obj_invalidate(t_box);
 }
 
 static void split_and_add_tty()
@@ -244,7 +286,9 @@ static void split_and_add_tty()
         if (end > buffer_len)
             end = buffer_len;
 
+        pthread_mutex_lock(&tty_updater_mutex);
         update_tty(buffer + start, end - start, false);
+        pthread_mutex_unlock(&tty_updater_mutex);
     }
 
     term_needs_update = false;
@@ -432,16 +476,24 @@ int main(int argc, char *argv[]) {
 
     clock_gettime(CLOCK_MONOTONIC, &last_update_time);
 
+    if (pthread_create(&tty_update_thread, NULL, tty_update_thread_func, NULL) != 0) {
+        ul_log(UL_LOG_LEVEL_ERROR, "Failed to create TTY update thread");
+        exit(EXIT_FAILURE);
+    }
+
     while(1) {
         lv_task_handler();
-
-        if (is_time_to_update()) {
-            update_tty(ul_terminal_update_interpret_buffer(), BUFFER_SIZE, true);
-            lv_obj_invalidate(lv_scr_act());
-        }
+        if (is_time_to_update())
+            request_tty_update();
 
         usleep(500);
     }
+
+    tty_thread_running = false;
+    pthread_cond_signal(&tty_cond);
+    pthread_join(tty_update_thread, NULL);
+    pthread_mutex_destroy(&tty_updater_mutex);
+    pthread_cond_destroy(&tty_cond);
 
     return 0;
 }
