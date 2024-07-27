@@ -70,6 +70,13 @@ bool is_keyboard_hidden = true;
 lv_obj_t *keyboard = NULL;
 lv_obj_t* t_box = NULL;
 
+#define MAX_TEXTAREA_LENGTH 9314
+#define UPDATE_INTERVAL 16666 // microseconds (approx. 60 FPS)
+#define BUFFER_SIZE 4096
+
+static char previous_content[BUFFER_SIZE] = {0};
+static struct timespec last_update_time = {0, 0};
+
 /**
  * Static prototypes
  */
@@ -117,15 +124,13 @@ static void send_sig_term();
  */
 static void sigaction_handler(int signum);
 
-static void update_tty_loop(lv_timer_t* timer);
-
 static void update_tty(char * loc, int length, bool split);
-
-static void clear_top_tty(char* loc);
 
 static void split_and_add_tty();
 
 static void clean_illegal_chars(char *loc);
+
+static bool is_time_to_update();
 
 /**
  * Static functions
@@ -186,79 +191,90 @@ static void sigaction_handler(int signum) {
     exit(0);
 }
 
-static void update_tty_loop(lv_timer_t* timer) {
-    LV_UNUSED(timer);
-    update_tty(ul_terminal_update_interpret_buffer(),BUFFER_SIZE,true);
-}
-
-static void update_tty(char *loc,int length, bool split)
+static void update_tty(char *loc, int length, bool split)
 {
-    if (term_needs_update && length > 0) {
-        int maxlen = length == BUFFER_SIZE ? 9314 : 4096;
-        if (strstr(loc, "\033[2J") != NULL)
-            lv_textarea_set_text(t_box, "");
-        if (split) {
-            if ((strlen(lv_textarea_get_text(t_box)) + strlen(loc) >= 4096) && loc == ul_terminal_update_interpret_buffer()) {
-                split_and_add_tty();
-                return;
-            }
+    if (!term_needs_update || length <= 0)
+        return;
+
+    if (memcmp(loc, previous_content, length) == 0)
+        return;
+
+    if (strstr(loc, "\033[2J") != NULL) {
+        lv_textarea_set_text(t_box, "");
+    } else {
+        if (split && strlen(lv_textarea_get_text(t_box)) + length >= MAX_TEXTAREA_LENGTH && loc == ul_terminal_update_interpret_buffer()) {
+            split_and_add_tty();
+            return;
         }
 
-        if (strlen(lv_textarea_get_text(t_box)) >= (size_t)maxlen)
-            clear_top_tty(loc);
+        size_t current_length = strlen(lv_textarea_get_text(t_box));
+        if (current_length >= MAX_TEXTAREA_LENGTH) {
+            size_t overflow = current_length + length - MAX_TEXTAREA_LENGTH;
+            if (overflow > 0) {
+                lv_textarea_set_cursor_pos(t_box, 0);
+                lv_textarea_del_char_forward(t_box);
+                lv_textarea_set_cursor_pos(t_box, LV_TEXTAREA_CURSOR_LAST);
+            }
+        }
 
         remove_escape_codes(loc);
         clean_illegal_chars(loc);
         lv_textarea_add_text(t_box, loc);
-
-        if (split)
-            term_needs_update = false;
-        for (char* i = loc; i < length + loc; i++)
-            *i = '\0';
     }
+
+    if (split)
+        term_needs_update = false;
+
+    memcpy(previous_content, loc, length);
+    memset(loc, 0, length);
+
+    lv_obj_invalidate(t_box);
 }
 
 static void split_and_add_tty()
 {
-    int j = ((strlen(lv_textarea_get_text(t_box)) + strlen(ul_terminal_update_interpret_buffer())) / 4096) + 1;
-    int section_size = strlen(ul_terminal_update_interpret_buffer()) / j;
+    char *buffer = ul_terminal_update_interpret_buffer();
+    size_t buffer_len = strlen(buffer);
+    size_t chunk_size = BUFFER_SIZE / 2;
+    size_t chunks = (buffer_len + chunk_size - 1) / chunk_size;
 
-    for (int i = j; i >=1; i--) {
-        char* text_section = (char*)malloc(section_size+1);
-        memcpy(text_section, ul_terminal_update_interpret_buffer() + ((j - i) * section_size), section_size);
-        text_section[section_size] = '\0';
-        update_tty(text_section,section_size,false);
-        if (text_section != NULL) {
-            free(text_section);
-            text_section = NULL;
-        }
+    for (size_t i = 0; i < chunks; i++) {
+        size_t start = i * chunk_size;
+        size_t end = (i + 1) * chunk_size;
+        if (end > buffer_len)
+            end = buffer_len;
+
+        update_tty(buffer + start, end - start, false);
     }
 
     term_needs_update = false;
 }
 
-static void clear_top_tty(char* loc)
+static inline void clean_illegal_chars(char *loc)
 {
-    char text_buffer[9314];
+    unsigned char *src = (unsigned char *)loc;
+    unsigned char *dst = (unsigned char *)loc;
 
-    strcpy(text_buffer,lv_textarea_get_text(t_box));
-
-    char *new_text = text_buffer+strlen(loc);
-
-    lv_textarea_set_text(t_box,new_text);
-}
-
-static void clean_illegal_chars(char *loc)
-{
-    char *src = loc, *dst = loc;
-
-    while (*src != 0) {
-        if (isalnum((unsigned char)*src) || ispunct((unsigned char)*src) || isspace((unsigned char)*src)) {
+    while (*src) {
+        if (*src >= 32 && *src <= 126)
             *dst++ = *src;
-        }
         src++;
     }
     *dst = '\0';
+}
+
+static inline bool is_time_to_update() {
+    struct timespec current_time;
+    clock_gettime(CLOCK_MONOTONIC, &current_time);
+
+    long elapsed_us = (current_time.tv_sec - last_update_time.tv_sec) * 1000000 +
+                      (current_time.tv_nsec - last_update_time.tv_nsec) / 1000;
+
+    if (elapsed_us >= UPDATE_INTERVAL) {
+        last_update_time = current_time;
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -414,11 +430,17 @@ int main(int argc, char *argv[]) {
     if (!ul_terminal_prepare_current_terminal((int)lv_obj_get_width(t_box),(int)lv_obj_get_height(t_box)))
         lv_textarea_add_text(t_box, "Could not prepare the terminal!");
 
-    lv_timer_create(update_tty_loop, 50, NULL);
+    clock_gettime(CLOCK_MONOTONIC, &last_update_time);
 
     while(1) {
         lv_task_handler();
-        usleep(5000);
+
+        if (is_time_to_update()) {
+            update_tty(ul_terminal_update_interpret_buffer(), BUFFER_SIZE, true);
+            lv_obj_invalidate(lv_scr_act());
+        }
+
+        usleep(500);
     }
 
     return 0;
