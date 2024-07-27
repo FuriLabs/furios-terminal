@@ -176,6 +176,16 @@ static void* tty_thread(void* arg)
                 }
             }
             else if ((p[0].revents & POLLOUT) && command_ready_to_send) {
+                char first_word[5];
+                sscanf(command_buffer, "%4s", first_word);
+                if (strcmp(first_word, "exit") == 0) {
+                    run_kill_child_pids();
+                    kill(pid, SIGTERM);
+                    close(tty_fd);
+                    pthread_mutex_unlock(&tty_mutex);
+                    exit(0);
+                }
+
                 write(tty_fd, &command_buffer, sizeof(command_buffer));
                 command_ready_to_send = false;
                 entered_command = (char*)malloc(command_buffer_length);
