@@ -144,6 +144,8 @@ static bool is_time_to_update();
 
 static void back_button_event_handler(lv_event_t * e);
 
+static void theme_button_event_handler(lv_event_t * e);
+
 /**
  * Static functions
  */
@@ -328,6 +330,19 @@ static void back_button_event_handler(lv_event_t * e) {
     exit(0);
 }
 
+static void theme_button_event_handler(lv_event_t * e) {
+    LV_UNUSED(e);
+
+    if (is_alternate_theme) {
+        ul_theme_apply(&(ul_themes_themes[1]));
+    } else {
+        ul_theme_apply(&(ul_themes_themes[0]));
+    }
+
+    // Toggle the theme flag for the next event
+    is_alternate_theme = !is_alternate_theme;
+}
+
 /**
  * Main
  */
@@ -455,6 +470,16 @@ int main(int argc, char *argv[]) {
     lv_obj_t *back_label = lv_label_create(back_btn);
     lv_label_set_text(back_label, LV_SYMBOL_LEFT);
     lv_obj_center(back_label);
+
+    /* Theme button */
+    lv_obj_t *theme_btn = lv_btn_create(top_label_container);
+    lv_obj_set_size(theme_btn, 80, 80);
+    lv_obj_align(theme_btn, LV_ALIGN_TOP_LEFT, 250, 10);
+    lv_obj_add_event_cb(theme_btn, theme_button_event_handler, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *theme_label = lv_label_create(theme_btn);
+    lv_label_set_text(theme_label, LV_SYMBOL_REFRESH);
+    lv_obj_center(theme_label);
 
     /* Top label text */
     lv_obj_t *furios_label = lv_label_create(top_label_container);
