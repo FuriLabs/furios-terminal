@@ -118,8 +118,11 @@ static void* tty_thread(void* arg)
 
     if (pid == 0) {
         putenv("TERM=xterm");
-        char* args[] = { getenv("SHELL"),"-l","-i", NULL};
-//        execl(args[0], args, NULL);
+        char* shell = getenv("SHELL");
+        if (shell == NULL) {
+            shell = "/bin/sh";
+        }
+        char* args[] = { shell, "-l", "-i", NULL };
         execvp(args[0], args);
     } else {
         struct pollfd p[2] = { { tty_fd, POLLIN | POLLOUT, 0 } };
