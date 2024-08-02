@@ -40,6 +40,7 @@
 #include <pthread.h>
 #include <pty.h>
 #include <signal.h>
+#include <termios.h>
 
 /**
  * Static variables
@@ -101,6 +102,13 @@ static void clean_command_buffer()
         command_buffer[i] = '\0';
 }
 
+void disable_echo(int fd) {
+    struct termios term;
+    tcgetattr(fd, &term);
+    term.c_lflag &= ~ECHO;
+    tcsetattr(fd, TCSANOW, &term);
+}
+
 static void* tty_thread(void* arg)
 {
     struct winsize ws = {0};
@@ -125,6 +133,11 @@ static void* tty_thread(void* arg)
         char* args[] = { shell, "-l", "-i", NULL };
         execvp(args[0], args);
     } else {
+        char* shell = getenv("SHELL");
+        if (shell != NULL && strlen(shell) > 0) {
+            disable_echo(tty_fd);
+        }
+
         struct pollfd p[2] = { { tty_fd, POLLIN | POLLOUT, 0 } };
         while (1) {
             pthread_mutex_lock(&tty_mutex);
