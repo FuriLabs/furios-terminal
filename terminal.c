@@ -189,12 +189,10 @@ static void* tty_thread(void* arg)
                     exit(0);
                 }
 
-                write(tty_fd, &command_buffer, sizeof(command_buffer));
+                write(tty_fd, command_buffer, strlen(command_buffer));
                 command_ready_to_send = false;
-                entered_command = (char*)malloc(command_buffer_length);
-                memcpy(entered_command, command_buffer, command_buffer_length);
-                entered_command[command_buffer_length] = '\0';
-                tmp_length = command_buffer_length;
+                entered_command = strdup(command_buffer);
+                tmp_length = strlen(command_buffer);
                 clean_command_buffer();
             }
             pthread_mutex_unlock(&tty_mutex);
