@@ -62,7 +62,7 @@ pthread_mutex_t tty_mutex;
 
 static void* tty_thread(void* arg);
 
-static void run_kill_child_pids();
+static void run_kill_child_pids(int signal);
 
 static void clean_command_buffer();
 
@@ -76,26 +76,22 @@ typedef struct term_dimen
  * Static functions
  */
 
-static void run_kill_child_pids()
-{
+static void run_kill_child_pids(int signal) {
     char number_buffer[20];
-    sprintf(number_buffer,"%d",sig_int_pid);
-    char *command_to_send = (char*)malloc(strlen("pgrep -P ") + strlen(number_buffer));
-    strcpy(command_to_send,"pgrep -P ");
-    strcpy(command_to_send+strlen("pgrep -P "),number_buffer);
-    FILE *fp = popen(command_to_send,"r");
+    sprintf(number_buffer, "%d", sig_int_pid);
+    char *command_to_send = (char*)malloc(strlen("pgrep -P ") + strlen(number_buffer) + 1);
+    strcpy(command_to_send, "pgrep -P ");
+    strcat(command_to_send, number_buffer);
+    FILE *fp = popen(command_to_send, "r");
     free(command_to_send);
     if (fp == NULL)
         return;
-
-    while (fgets(number_buffer,20,fp) != NULL)
-        kill(atoi(number_buffer),SIGINT);
-
+    while (fgets(number_buffer, 20, fp) != NULL)
+        kill(atoi(number_buffer), signal);
     pclose(fp);
 }
 
-static void clean_command_buffer()
-{
+static void clean_command_buffer() {
     command_buffer_pos = 0;
     command_buffer_length = 0;
     for (long unsigned int i = 0; i < sizeof(command_buffer); i++)
@@ -145,11 +141,16 @@ static void* tty_thread(void* arg)
 
             usleep(100);
 
-            if (sig_int_sent)
-            {
-                run_kill_child_pids();
-                kill(pid,SIGINT);
+            if (sig_int_sent) {
+                run_kill_child_pids(SIGINT);
+                kill(pid, SIGINT);
                 sig_int_sent = false;
+                clean_command_buffer();
+            }
+            if (sig_tstp_sent) {
+                run_kill_child_pids(SIGTSTP);
+                kill(pid, SIGTSTP);
+                sig_tstp_sent = false;
                 clean_command_buffer();
             }
 
@@ -195,7 +196,7 @@ static void* tty_thread(void* arg)
                 char first_word[5];
                 sscanf(command_buffer, "%4s", first_word);
                 if (strcmp(first_word, "exit") == 0) {
-                    run_kill_child_pids();
+                    run_kill_child_pids(SIGTERM);
                     kill(pid, SIGTERM);
                     close(tty_fd);
                     pthread_mutex_unlock(&tty_mutex);
