@@ -17,6 +17,7 @@
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <stdio.h>
 #include <stdbool.h>
 
 void remove_escape_codes(char *buffer)
@@ -25,26 +26,23 @@ void remove_escape_codes(char *buffer)
     char *dst = buffer;
     bool inside_escape = false;
 
-    // Iterate through the string character by character
     while (*src != '\0') {
-        if (*src == '\x1B') {  // Found ESC character, indicating start of escape sequence
+        if (*src == '\x1B') {
             inside_escape = true;
+        } else if (*src == '^' && *(src + 1) == '@') {
+            src++; // skip ^@, its garbage
+        } else if (!inside_escape) {
+            if (*src == '\x0A') {
+                *dst++ = *src;
+            } else {
+                *dst++ = *src;
+            }
         }
 
-        if (!inside_escape) {
-            // Copy characters to destination if not inside an escape sequence
-            *dst = *src;
-            dst++;
-        }
-
-        if (inside_escape && (*src == '\x0D' || *src == 'h' || *src == 'm')) {  // Found end of escape sequence
+        if (inside_escape && (*src == '\x0D' || *src == 'h' || *src == 'm')) {
             inside_escape = false;
         }
-
-        src++;  // Move to the next character
+        src++;
     }
-
-    // Null-terminate the destination string
     *dst = '\0';
-    
 }
