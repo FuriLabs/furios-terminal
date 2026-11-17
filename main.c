@@ -464,7 +464,7 @@ int main(int argc, char *argv[]) {
     /* Back button */
     lv_obj_t *back_btn = lv_btn_create(top_label_container);
     lv_obj_set_size(back_btn, 80, 80);
-    lv_obj_align(back_btn, LV_ALIGN_TOP_LEFT, 150, 10);
+    lv_obj_align(back_btn, LV_ALIGN_LEFT_MID, 10, 0);
     lv_obj_add_event_cb(back_btn, back_button_event_handler, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *back_label = lv_label_create(back_btn);
@@ -474,7 +474,7 @@ int main(int argc, char *argv[]) {
     /* Theme button */
     lv_obj_t *theme_btn = lv_btn_create(top_label_container);
     lv_obj_set_size(theme_btn, 80, 80);
-    lv_obj_align(theme_btn, LV_ALIGN_TOP_LEFT, 250, 10);
+    lv_obj_align(theme_btn, LV_ALIGN_LEFT_MID, 100, 0);
     lv_obj_add_event_cb(theme_btn, theme_button_event_handler, LV_EVENT_CLICKED, NULL);
 
     lv_obj_t *theme_label = lv_label_create(theme_btn);
@@ -484,7 +484,7 @@ int main(int argc, char *argv[]) {
     /* Top label text */
     lv_obj_t *furios_label = lv_label_create(top_label_container);
     lv_label_set_text(furios_label, "FuriOS Terminal");
-    lv_obj_align(furios_label, LV_ALIGN_TOP_MID, 0, 50);
+    lv_obj_center(furios_label);
 
     /* Terminal box */
     t_box = lv_textarea_create(lv_scr_act());
